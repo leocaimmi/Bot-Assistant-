@@ -1,7 +1,8 @@
 """Reads workout messages such as ``"pecho: banco plano 4x12 60kg, inclinado con mancuerna 3x8"``.
 
-Format: optional day and muscle group, then exercises separated by commas, ``;``, ``y`` or
-line breaks. Each exercise is ``<name> <sets>x<reps> [weight]``: sets first, then reps.
+Format: optional day and muscle group, then exercises separated by commas, ``;``, ``y``
+(``e`` before an i), or line breaks. Each exercise is ``<name> <sets>x<reps> [weight]``:
+sets first, then reps.
 """
 
 import re
@@ -40,16 +41,18 @@ MUSCLE_WORDS: dict[str, MuscleGroup] = {
 }
 _LEAD_WORDS = {"hice", "hoy", "entrene", "entreno", "rutina", "dia", "de", ":"}
 
-# Sets x reps: "4x12", "4 x 12" (x or the multiplication sign), or "4 series de 12".
-_SETS_REPS = re.compile(r"(?P<sets>\d{1,2})\s*[x\u00d7*]\s*(?P<reps>\d{1,3})\b")
+# Sets x reps: "4x12", "4 x 12", "4 por 12" (also with the multiplication sign), or
+# "4 series de 12".
+_SETS_REPS = re.compile(r"(?P<sets>\d{1,2})\s*(?:[x\u00d7*]|por)\s*(?P<reps>\d{1,3})\b")
 _SERIES = re.compile(
     r"(?P<sets>\d{1,2})\s*series?\s*(?:de|por|x)\s*(?P<reps>\d{1,3})"
     r"(?:\s*(?:reps?|repeticiones))?\b"
 )
 _WEIGHT_WITH_UNIT = re.compile(r"(?:\bcon\s+)?(?P<kg>\d{1,4}(?:[.,]\d{1,3})?)\s*(?:kgs?|kilos?)\b")
 _BARE_WEIGHT_AFTER = re.compile(r"^\s*(?:con\s+)?(?P<kg>\d{1,4}(?:[.,]\d{1,3})?)\s*$")
-# Exercise separators: line breaks, ";", " y ", and commas that are not decimal commas.
-_SEPARATORS = re.compile(r"\s*(?:[;\n]|,(?!\d)|\sy\s)\s*")
+# Exercise separators: line breaks, ";", " y " (" e " in "e inclinado"), and commas that
+# are not decimal commas.
+_SEPARATORS = re.compile(r"\s*(?:[;\n]|,(?!\d)|\s[ye]\s)\s*")
 
 
 @dataclass(frozen=True, slots=True)
