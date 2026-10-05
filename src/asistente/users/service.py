@@ -18,3 +18,6 @@ class UserService:
         self._session.add(user)
         await self._session.flush()
         return user, True
+
+    async def all(self) -> list[User]:
+        return list(await self._session.scalars(select(User).order_by(User.id)))

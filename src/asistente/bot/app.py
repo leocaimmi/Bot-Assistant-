@@ -15,16 +15,17 @@ from asistente.bot.middlewares import (
     AccessMiddleware,
     CommandResetsStateMiddleware,
     DbSessionMiddleware,
-    RegistrationHook,
     UserMiddleware,
+    UserSetupHook,
 )
 from asistente.config import Settings
 from asistente.db.engine import create_engine, create_session_factory
+from asistente.users.service import UserService
 
 logger = logging.getLogger(__name__)
 
-# Initial data each module needs for a brand-new user.
-REGISTRATION_HOOKS: tuple[RegistrationHook, ...] = ()
+# Data each module prepares for a user (see UserSetupHook).
+USER_SETUP_HOOKS: tuple[UserSetupHook, ...] = ()
 
 
 def build_dispatcher(
@@ -38,7 +39,7 @@ def build_dispatcher(
     dispatcher.message.outer_middleware(CommandResetsStateMiddleware())
     for observer in (dispatcher.message, dispatcher.callback_query):
         observer.middleware(DbSessionMiddleware(session_factory))
-        observer.middleware(UserMiddleware(REGISTRATION_HOOKS))
+        observer.middleware(UserMiddleware(USER_SETUP_HOOKS))
 
     dispatcher.include_routers(
         common.build_router(),
@@ -55,12 +56,22 @@ def build_bot(settings: Settings) -> Bot:
     )
 
 
+async def set_up_existing_users(session_factory: async_sessionmaker[AsyncSession]) -> None:
+    """Run the setup hooks for every user, so new defaults reach existing users too."""
+    async with session_factory() as session, session.begin():
+        for user in await UserService(session).all():
+            for hook in USER_SETUP_HOOKS:
+                await hook(session, user)
+
+
 async def run_polling(settings: Settings) -> None:
     """Long polling: the bot pulls updates, so no HTTP port is exposed to the internet."""
     engine = create_engine(settings.database_url.get_secret_value())
-    dispatcher = build_dispatcher(settings, create_session_factory(engine))
+    session_factory = create_session_factory(engine)
+    dispatcher = build_dispatcher(settings, session_factory)
     bot = build_bot(settings)
     try:
+        await set_up_existing_users(session_factory)
         await bot.delete_webhook(drop_pending_updates=False)
         await set_bot_commands(bot)
         logger.info("Bot started (long polling)")
