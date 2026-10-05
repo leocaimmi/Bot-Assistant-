@@ -15,18 +15,31 @@ from asistente.bot.middlewares import (
     AccessMiddleware,
     CommandResetsStateMiddleware,
     DbSessionMiddleware,
+    ServicesMiddleware,
     UserMiddleware,
     UserSetupHook,
 )
 from asistente.config import Settings
 from asistente.db.engine import create_engine, create_session_factory
+from asistente.finance.categories import CategoryService
 from asistente.finance.defaults import seed_defaults
+from asistente.finance.service import FinanceService
+from asistente.gym.service import GymService
 from asistente.users.service import UserService
 
 logger = logging.getLogger(__name__)
 
 # Data each module prepares for a user (see UserSetupHook).
 USER_SETUP_HOOKS: tuple[UserSetupHook, ...] = (seed_defaults,)
+
+
+def build_services(session: AsyncSession, settings: Settings) -> dict[str, object]:
+    """Services available to handlers by name, bound to the update's session."""
+    return {
+        "finance": FinanceService(session, settings.tz),
+        "category_service": CategoryService(session),
+        "gym": GymService(session),
+    }
 
 
 def build_dispatcher(
@@ -41,6 +54,7 @@ def build_dispatcher(
     for observer in (dispatcher.message, dispatcher.callback_query):
         observer.middleware(DbSessionMiddleware(session_factory))
         observer.middleware(UserMiddleware(USER_SETUP_HOOKS))
+        observer.middleware(ServicesMiddleware(build_services))
 
     dispatcher.include_routers(
         common.build_router(),
