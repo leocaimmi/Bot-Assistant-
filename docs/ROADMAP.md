@@ -6,7 +6,7 @@ Plan de trabajo del bot asistente personal de Telegram.
 
 Un bot de Telegram de uso personal (un solo usuario) para:
 
-1. **Finanzas**: registrar gastos e ingresos en pesos argentinos escribiendo texto libre
+1. **Finanzas**: registrar gastos e ingresos en pesos argentinos escribiendo o dictando
    (`uber 2000`, `gym 47.000`, `transferencia utn 200.000`), editarlos, listarlos y obtener
    un resumen mensual por categoría y por cuenta.
 2. **Gimnasio**: llevar la rutina: días entrenados, ejercicios, series × repeticiones y peso.
@@ -33,7 +33,9 @@ Un bot de Telegram de uso personal (un solo usuario) para:
 | 5. Gimnasio | `feat/gym-tracker` | Hecho, falta merge |
 | 6. Comandos de texto | `feat/text-commands` | Hecho, falta merge |
 | 7. IA para mensajes libres | `feat/ai-interpreter` | Hecho, falta merge |
-| 8. Mejoras | varias | Backlog |
+| 8. IA más barata (GPT-6 Luna) | `feat/gpt-6-luna` | Hecho, falta merge |
+| 9. Audios | `feat/voice-messages` | Hecho, falta merge |
+| 10. Mejoras | varias | Backlog |
 
 ### Fase 0: base del repositorio
 
@@ -104,14 +106,34 @@ Sin IA y sin costo: `borrar uber 2000`, `borrar el último` (con confirmación),
 ### Fase 7: IA para mensajes libres
 
 Modelo híbrido: las reglas resuelven gratis lo simple y solo lo que no entienden va a
-OpenAI (`gpt-5.4-nano`), con una consulta por mensaje:
+OpenAI (`gpt-6-luna` desde la fase 8), con una consulta por mensaje:
 
 - Correcciones: `el uber de ayer eran 2500` muestra el antes y después y espera tu OK.
 - Gastos escritos libremente: `gasté dos lucas en el super`.
 - Entrenamientos libres: `hice press plano 4 de 12 con 60 y fondos 3 de 10`.
 - `/ia`: consultas del día y del mes, tokens y costo estimado.
 
-### Fase 8: mejoras (backlog)
+### Fase 8: IA más barata
+
+- Modelo por defecto `gpt-6-luna`: US$0,10 de entrada y US$0,50 de salida por millón de
+  tokens, la mitad que `gpt-5.4-nano`, con Structured Outputs y razonamiento `none`.
+- El costo de cada consulta se calcula al hacerla, incluyendo las lecturas y escrituras
+  del caché de prompts (desde GPT-5.6 escribir en el caché cuesta 1,25 veces la entrada),
+  y se guarda en micro-dólares: `/ia` muestra el costo real aunque cambies de modelo.
+
+### Fase 9: audios
+
+Un audio de hasta un minuto se transcribe con `gpt-4o-mini-transcribe` (US$0,003 por
+minuto). El bot muestra lo que entendió y lo procesa como un mensaje escrito: primero las
+reglas, y la IA solo si no lo entienden.
+
+- Lo dictado se adapta a las reglas: cada oración pasa a ser una línea y se entienden
+  `4 por 12` y `e` entre ejercicios (`... con 60 kilos e inclinado 3 por 8`).
+- El audio se descarga en memoria y no se guarda; los audios largos se rechazan antes de
+  descargarlos.
+- Cada audio cuenta en el tope diario y aparece en `/ia` con su duración y costo.
+
+### Fase 10: mejoras (backlog)
 
 - Gastos recurrentes (por ejemplo, la cuota del gimnasio todos los meses).
 - Presupuestos por categoría con aviso al acercarse al límite.
@@ -154,7 +176,8 @@ Fechas aceptadas: `hoy`, `ayer`, `anteayer`, `15/09`, `15/09/2026`.
 | Nafta | Categoría Transporte por defecto | Se puede mover con `/palabra nafta <categoría>` |
 | "transferencia" | Se toma como ingreso | Según el ejemplo `transferencia utn 200.000`; con `-` adelante se fuerza gasto |
 | Gimnasio | `4x12` = 4 series de 12 | Así lo escribís vos: primero las series |
-| IA | Híbrida, `gpt-5.4-nano`, opcional | Lo simple con reglas (gratis e instantáneo); la IA solo para lo que las reglas no entienden, con salida validada y confirmación para editar o borrar |
+| IA | Híbrida, `gpt-6-luna`, opcional | Lo simple con reglas (gratis e instantáneo); la IA solo para lo que las reglas no entienden, con salida validada y confirmación para editar o borrar. Luna es el modelo más barato con Structured Outputs |
+| Audios | Transcribir con `gpt-4o-mini-transcribe` y seguir con las reglas | Es el modelo de transcripción más barato; Luna no acepta audio, y si las reglas entienden lo dictado no hace falta una segunda consulta |
 
 ## Flujo de trabajo con Git
 
@@ -163,6 +186,7 @@ Fechas aceptadas: `hoy`, `ayer`, `anteayer`, `15/09`, `15/09/2026`.
 - Las ramas de código están apiladas porque cada una depende de la anterior:
   `main` ← `chore/project-setup` ← `feat/bot-core` ← `feat/finance-transactions`
   ← `feat/finance-reports` ← `feat/finance-categories` ← `feat/gym-tracker`
-  ← `feat/text-commands` ← `feat/ai-interpreter`.
+  ← `feat/text-commands` ← `feat/ai-interpreter` ← `feat/gpt-6-luna`
+  ← `feat/voice-messages`.
 - Orden de merge a `main`: `docs/project-plan` (independiente) y después las ramas de
   código en el orden de la cadena.
