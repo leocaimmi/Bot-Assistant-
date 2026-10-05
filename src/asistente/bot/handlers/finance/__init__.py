@@ -3,7 +3,7 @@ from typing import Any
 from aiogram import BaseMiddleware, Router
 from aiogram.types import TelegramObject
 
-from asistente.bot.handlers.finance import entries, transactions
+from asistente.bot.handlers.finance import entries, reports, transactions
 from asistente.bot.middlewares.base import Handler
 from asistente.config import Settings
 from asistente.finance.service import FinanceService
@@ -23,5 +23,7 @@ def build_router() -> Router:
     router.message.middleware(FinanceServiceMiddleware())
     router.callback_query.middleware(FinanceServiceMiddleware())
     # Commands and buttons first; free text ("uber 2000") is the catch-all of the module.
-    router.include_routers(transactions.build_router(), entries.build_router())
+    router.include_routers(
+        transactions.build_router(), reports.build_router(), entries.build_router()
+    )
     return router
