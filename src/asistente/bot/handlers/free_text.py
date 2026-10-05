@@ -1,4 +1,4 @@
-"""Plain-text messages: a command, a workout, a money movement, or (last) the AI.
+"""Text messages, typed or transcribed: a command, a workout, a movement, or (last) the AI.
 
 Free rules first, in this order: a leading verb is a command ("borrar uber 2000"); sets x
 reps is a workout ("pecho: banco plano 4x12"); anything with an amount is a transaction
@@ -49,7 +49,34 @@ async def handle_free_text(
     ai_budget: DailyBudget,
     interpreter: Interpreter | None = None,
 ) -> None:
-    text = message.text or ""
+    await route_text(
+        message,
+        message.text or "",
+        finance=finance,
+        gym=gym,
+        ai_usage=ai_usage,
+        user=user,
+        settings=settings,
+        state=state,
+        ai_budget=ai_budget,
+        interpreter=interpreter,
+    )
+
+
+async def route_text(
+    message: Message,
+    text: str,
+    *,
+    finance: FinanceService,
+    gym: GymService,
+    ai_usage: AiUsageService,
+    user: User,
+    settings: Settings,
+    state: FSMContext,
+    ai_budget: DailyBudget,
+    interpreter: Interpreter | None,
+) -> None:
+    """Act on ``text`` and answer ``message`` (whose text may be a transcript)."""
     today = message.date.astimezone(settings.tz).date()
 
     # Commands first: "borrar uber 2000" must not register a new expense.
