@@ -29,6 +29,23 @@ Importes aceptados: `2000`, `2.000`, `1.500,50`, `2k`, `1,5k`, `200 mil`, `2 luc
 `1 palo`. Fechas: `hoy`, `ayer`, `anteayer`, `15/09`, `15/09/2026`. Cuentas: `mp`,
 `mercado pago`, `efectivo`, `banco`.
 
+### Gimnasio
+
+Primero las series y después las repeticiones; el peso es opcional.
+
+| Mensaje | Resultado |
+| ------- | --------- |
+| `pecho: banco plano 4x12 60kg, inclinado con mancuerna 3x8` | Anota 2 ejercicios de pecho en el día de hoy |
+| `hice pecho banco plano 4 series de 12` | Mismo formato con palabras |
+| `piernas: sentadilla 4x10 80kg; prensa 3x12` | Varios ejercicios, separados por coma, `;`, `y` o renglones |
+| `ayer espalda: dominadas 4x8` | Con fecha |
+| `/entreno [día]` | El entrenamiento del día, con botones para borrar ejercicios |
+| `/semana` | Días entrenados y músculos de la semana |
+| `/historial banco plano` | Progreso del ejercicio y récord personal |
+| `/ejercicios` | Tus ejercicios agrupados por músculo |
+
+Cada entrenamiento anotado trae un botón **Deshacer**.
+
 ## Requisitos
 
 - [uv](https://docs.astral.sh/uv/) (instala Python 3.12 y las dependencias)
