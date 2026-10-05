@@ -1,27 +1,14 @@
-from aiogram import F, Router
-from aiogram.filters import StateFilter
+from zoneinfo import ZoneInfo
+
 from aiogram.types import Message
 
 from asistente.bot.handlers.finance import keyboards, views
-from asistente.config import Settings
-from asistente.finance.service import FinanceService
-from asistente.users.models import User
+from asistente.finance.models import Transaction
 
 
-async def register_transaction(
-    message: Message, finance: FinanceService, user: User, settings: Settings
-) -> None:
-    """Plain text outside any conversation step is a new transaction: ``uber 2000``."""
-    transaction = await finance.register(user, message.text or "", now=message.date)
+async def answer_registered(message: Message, transaction: Transaction, tz: ZoneInfo) -> None:
+    """Reply with the card of a just-registered transaction and its action buttons."""
     await message.answer(
-        views.transaction_card(transaction, settings.tz, title=views.registered_title(transaction)),
+        views.transaction_card(transaction, tz, title=views.registered_title(transaction)),
         reply_markup=keyboards.transaction_actions(transaction.id),
     )
-
-
-def build_router() -> Router:
-    router = Router(name="finance.entries")
-    router.message.register(
-        register_transaction, StateFilter(None), F.text, ~F.text.startswith("/")
-    )
-    return router

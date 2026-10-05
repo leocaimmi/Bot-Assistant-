@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from asistente.bot.commands import set_bot_commands
 from asistente.bot.errors import on_error
-from asistente.bot.handlers import common, fallback, finance, gym
+from asistente.bot.handlers import common, fallback, finance, free_text, gym
 from asistente.bot.middlewares import (
     AccessMiddleware,
     CommandResetsStateMiddleware,
@@ -60,6 +60,7 @@ def build_dispatcher(
         common.build_router(),
         finance.build_router(),
         gym.build_router(),
+        free_text.build_router(),  # plain text: workouts and transactions
         fallback.build_router(),  # must stay last
     )
     dispatcher.errors.register(on_error)
