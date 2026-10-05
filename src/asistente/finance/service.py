@@ -21,7 +21,7 @@ from asistente.finance.models import (
     Transaction,
     TransactionKind,
 )
-from asistente.finance.parser import parse_entry
+from asistente.finance.parser import ParsedEntry, parse_entry
 from asistente.finance.reports import MonthlySummary, build_summary
 from asistente.finance.repository import FinanceRepository
 from asistente.users.models import User
@@ -85,7 +85,12 @@ class DayChange:
     day: date
 
 
-Change = AmountChange | CategoryChange | DayChange
+@dataclass(frozen=True, slots=True)
+class DescriptionChange:
+    description: str
+
+
+Change = AmountChange | CategoryChange | DayChange | DescriptionChange
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,8 +123,12 @@ class FinanceService:
 
         Raises ``MissingAmountError`` when the text has no amount.
         """
+        entry = parse_entry(text, today=now.astimezone(self._tz).date())
+        return await self.register_entry(user, entry, now=now)
+
+    async def register_entry(self, user: User, entry: ParsedEntry, *, now: datetime) -> Transaction:
+        """Create a transaction from already parsed parts (amount, words, kind, day)."""
         local_now = now.astimezone(self._tz)
-        entry = parse_entry(text, today=local_now.date())
         words = list(entry.words)
 
         account = await self._take_account(user, words)
@@ -142,13 +151,16 @@ class FinanceService:
 
     async def find_by_text(self, user: User, text: str, *, today: date) -> Transaction:
         """Most recent transaction matching ``"uber 2000"``, ``"uber ayer"`` or ``"el último"``."""
-        query = parse_target(text, today)
+        return await self.find(user, parse_target(text, today), shown_as=text)
+
+    async def find(self, user: User, query: TargetQuery, *, shown_as: str) -> Transaction:
+        """Most recent transaction matching ``query`` (``shown_as`` is used in errors)."""
         if query.is_empty:
             raise MissingTargetError
         recent = await self._repository.transactions(user.id, limit=SEARCH_WINDOW)
         match = next((tx for tx in recent if self._matches(tx, query)), None)
         if match is None:
-            raise NoMatchingTransactionError(text)
+            raise NoMatchingTransactionError(shown_as)
         return match
 
     async def resolve_change(self, user: User, text: str, *, today: date) -> Change | None:
@@ -171,6 +183,8 @@ class FinanceService:
                 return await self.change_category(user, transaction_id, category.id)
             case DayChange(day):
                 return await self.change_day(user, transaction_id, day)
+            case DescriptionChange(description):
+                return await self.change_description(user, transaction_id, description)
 
     async def get(self, user: User, transaction_id: int) -> Transaction:
         transaction = await self._repository.transaction(user.id, transaction_id)
