@@ -56,6 +56,18 @@ def test_drops_symbol_only_words() -> None:
     assert entry.words == ("uber",)
 
 
+@pytest.mark.parametrize(
+    ("text", "words"),
+    [
+        ("Uber, 2000.", ("Uber",)),
+        ("super 2.000 pesos", ("super",)),
+        ("café (efectivo) 500 ARS", ("café", "efectivo")),
+    ],
+)
+def test_punctuation_and_currency_stay_out_of_the_words(text: str, words: tuple[str, ...]) -> None:
+    assert parse_entry(text, today=TODAY).words == words
+
+
 @pytest.mark.parametrize("text", ["hola", "", "uber", "gym 4x10"])
 def test_requires_an_amount(text: str) -> None:
     with pytest.raises(MissingAmountError):
