@@ -26,7 +26,7 @@ Copiá `.env.example` a `.env` y completalo. `.env` está en `.gitignore`: nunca
 | -------- | ----------- | ----------- |
 | `BOT_TOKEN` | Sí | Token de @BotFather |
 | `ALLOWED_USER_IDS` | Sí | IDs de Telegram autorizados, separados por coma. El resto se ignora en silencio |
-| `DATABASE_URL` | No | Por defecto `sqlite+aiosqlite:///./data/asistente.db` |
+| `DATABASE_URL` | No | Por defecto `./data/asistente.db` en local y `/data/asistente.db` (el volumen) en Docker |
 | `TIMEZONE` | No | Por defecto `America/Argentina/Buenos_Aires` |
 | `LOG_LEVEL` | No | `DEBUG`, `INFO` (por defecto), `WARNING` o `ERROR` |
 
@@ -59,8 +59,8 @@ docker compose up --build
    `railway.json` y construye con el `Dockerfile`.
 2. En el servicio: **Settings → Volumes → Add Volume** montado en `/data`.
    Sin volumen, la base se borra en cada deploy.
-3. En **Variables** cargá `BOT_TOKEN`, `ALLOWED_USER_IDS` y
-   `DATABASE_URL=sqlite+aiosqlite:////data/asistente.db`.
+3. En **Variables** cargá `BOT_TOKEN` y `ALLOWED_USER_IDS`. La imagen ya guarda la base
+   en `/data/asistente.db`, dentro del volumen.
 4. Activá los backups automáticos del volumen.
 5. Dejá **una sola réplica**: los volúmenes no admiten más y Telegram solo permite un
    proceso haciendo polling por bot.

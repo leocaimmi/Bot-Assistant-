@@ -26,7 +26,8 @@ FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH" \
-    DATA_DIR=/data
+    DATA_DIR=/data \
+    DATABASE_URL=sqlite+aiosqlite:////data/asistente.db
 
 RUN groupadd --system app \
     && useradd --system --gid app --home-dir /app --shell /usr/sbin/nologin app
