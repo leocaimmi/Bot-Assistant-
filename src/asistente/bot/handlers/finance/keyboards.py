@@ -2,14 +2,45 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from asistente.bot.handlers.finance.callbacks import (
+    SummaryCallback,
     TxAccountCallback,
     TxAction,
     TxCallback,
     TxCategoryCallback,
     TxPageCallback,
 )
+from asistente.core.dates import MONTHS, shift_month
 from asistente.finance.models import Account, Category, Transaction, TransactionKind
+from asistente.finance.reports import MonthlySummary
 from asistente.finance.service import TransactionPage
+
+
+def summary_navigation(summary: MonthlySummary, current: tuple[int, int]) -> InlineKeyboardMarkup:
+    """Previous / next month (never past the current one) and the month's transactions."""
+    month = (summary.year, summary.month)
+    previous = shift_month(*month, -1)
+    following = shift_month(*month, 1)
+
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text=f"◀️ {MONTHS[previous[1] - 1]}",
+        callback_data=SummaryCallback(year=previous[0], month=previous[1]),
+    )
+    sizes = [1]
+    if following <= current:
+        builder.button(
+            text=f"{MONTHS[following[1] - 1]} ▶️",
+            callback_data=SummaryCallback(year=following[0], month=following[1]),
+        )
+        sizes = [2]
+    if summary.transaction_count:
+        builder.button(
+            text="🧾 Ver movimientos",
+            callback_data=TxPageCallback(page=0, year=summary.year, month=summary.month),
+        )
+        sizes.append(1)
+    builder.adjust(*sizes)
+    return builder.as_markup()
 
 
 def transaction_actions(transaction_id: int) -> InlineKeyboardMarkup:

@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 from asistente.core.dates import format_datetime, format_short_datetime, month_label
 from asistente.core.money import format_ars
 from asistente.finance.models import Transaction, TransactionKind
+from asistente.finance.reports import Group, MonthlySummary
 from asistente.finance.service import TransactionPage
 
 KIND_LABELS = {TransactionKind.EXPENSE: "Gasto", TransactionKind.INCOME: "Ingreso"}
@@ -65,6 +66,45 @@ def deleted(transaction_id: int) -> str:
     return f"🗑 Movimiento <i>#{transaction_id}</i> borrado."
 
 
+def monthly_summary(summary: MonthlySummary) -> str:
+    lines = [f"📊 <b>Resumen de {month_label(summary.year, summary.month)}</b>"]
+    if not summary.transaction_count:
+        lines += ["", "No hay movimientos en este mes."]
+        return "\n".join(lines)
+
+    if summary.expenses:
+        lines += ["", f"💸 <b>Gastaste {format_ars(summary.expense_total)}</b>"]
+        lines += _group_lines(summary.expenses, total=summary.expense_total)
+    if summary.incomes:
+        lines += ["", f"💰 <b>Ingresaste {format_ars(summary.income_total)}</b>"]
+        lines += _group_lines(summary.incomes, total=None)
+
+    plural = "movimiento" if summary.transaction_count == 1 else "movimientos"
+    lines += [
+        "",
+        f"⚖️ Balance: <b>{format_ars(summary.balance, signed=True)}</b>",
+        f"🧾 {summary.transaction_count} {plural}",
+    ]
+    return "\n".join(lines)
+
+
+def _group_lines(groups: tuple[Group, ...], *, total: int | None) -> list[str]:
+    lines = []
+    for group in groups:
+        share = f" ({_percentage(group.cents, total)})" if total else ""
+        lines.append(f"{group.emoji} {escape(group.name)}: <b>{format_ars(group.cents)}</b>{share}")
+        details = " · ".join(
+            f"{escape(detail.label)} {format_ars(detail.cents)}" for detail in group.details
+        )
+        lines.append(f"    └ {details}")
+    return lines
+
+
+def _percentage(part: int, total: int) -> str:
+    percentage = round(part * 100 / total)
+    return "<1%" if percentage == 0 else f"{percentage}%"
+
+
 ASK_AMOUNT = "💲 Mandame el nuevo importe, por ejemplo <code>2.500</code>.\n/cancelar para dejarlo."
 ASK_DESCRIPTION = "📝 Mandame la nueva descripción.\n/cancelar para dejarla."
 ASK_DAY = (
@@ -79,4 +119,8 @@ EMPTY_DESCRIPTION = "La descripción no puede estar vacía. Probá de nuevo o /c
 INVALID_MONTH = (
     "🤔 No entendí el mes. Probá con <code>/movimientos septiembre</code> "
     "o <code>/movimientos 09/2026</code>."
+)
+INVALID_SUMMARY_MONTH = (
+    "🤔 No entendí el mes. Probá con <code>/resumen</code>, <code>/resumen septiembre</code> "
+    "o <code>/resumen 09/2026</code>."
 )
