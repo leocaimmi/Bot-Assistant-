@@ -45,9 +45,12 @@ class Settings(DatabaseSettings):
     @field_validator("allowed_user_ids", mode="before")
     @classmethod
     def _split_user_ids(cls, value: Any) -> Any:
-        if isinstance(value, str):
+        if not isinstance(value, str):
+            return value
+        try:
             return frozenset(int(part) for part in value.split(",") if part.strip())
-        return value
+        except ValueError:
+            raise ValueError("ALLOWED_USER_IDS must be comma-separated numeric ids") from None
 
     @field_validator("allowed_user_ids")
     @classmethod
