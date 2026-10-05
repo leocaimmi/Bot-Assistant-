@@ -5,7 +5,8 @@ from zoneinfo import ZoneInfo
 
 from asistente.core.dates import format_datetime, format_short_datetime, month_label
 from asistente.core.money import format_ars
-from asistente.finance.models import Transaction, TransactionKind
+from asistente.finance.categories import KeywordAssignment
+from asistente.finance.models import Category, Transaction, TransactionKind
 from asistente.finance.reports import Group, MonthlySummary
 from asistente.finance.service import TransactionPage
 
@@ -98,6 +99,65 @@ def _group_lines(groups: tuple[Group, ...], *, total: int | None) -> list[str]:
         )
         lines.append(f"    └ {details}")
     return lines
+
+
+def categories_overview(categories: list[Category]) -> str:
+    lines = ["🏷 <b>Categorías y palabras clave</b>"]
+    for kind, title in ((TransactionKind.EXPENSE, "Gastos"), (TransactionKind.INCOME, "Ingresos")):
+        lines += ["", f"<b>{title}</b>"]
+        for category in (c for c in categories if c.kind is kind):
+            keywords = ", ".join(escape(keyword.keyword) for keyword in category.keywords)
+            if category.is_fallback:
+                keywords = (
+                    f"{keywords}; además, todo lo que no coincide"
+                    if keywords
+                    else ("todo lo que no coincide con otra")
+                )
+            lines.append(f"{category.emoji} <b>{escape(category.name)}</b>: {keywords or '-'}")
+    lines += [
+        "",
+        "Enseñame una palabra: <code>/palabra nafta transporte</code>",
+        "Creá una categoría: <code>/nueva_categoria 🚙 Auto</code>",
+    ]
+    return "\n".join(lines)
+
+
+def keyword_assigned(assignment: KeywordAssignment) -> str:
+    keyword = f"<b>{escape(assignment.keyword)}</b>"
+    target = escape(assignment.category.label)
+    if assignment.previous is not None and assignment.previous.id == assignment.category.id:
+        return f"👌 {keyword} ya estaba en {target}."
+    moved = (
+        f" (antes estaba en {escape(assignment.previous.label)})"
+        if assignment.previous is not None
+        else ""
+    )
+    return (
+        f"✅ Listo: {keyword} → {target}{moved}.\n"
+        "Los movimientos nuevos que la usen van a esa categoría; los anteriores no cambian."
+    )
+
+
+def category_created(category: Category) -> str:
+    kind = KIND_LABELS[category.kind].lower()
+    example = escape(category.name.lower())
+    return (
+        f"✅ Categoría de {kind} {escape(category.label)} creada.\n"
+        f"Enseñale palabras con <code>/palabra &lt;palabra&gt; {example}</code>."
+    )
+
+
+KEYWORD_USAGE = (
+    "Escribí la palabra y la categoría, por ejemplo:\n"
+    "<code>/palabra nafta transporte</code>\n"
+    "<code>/palabra pedidos ya comida</code>\n"
+    "Mirá las categorías con /categorias."
+)
+NEW_CATEGORY_USAGE = (
+    "Escribí el nombre, opcionalmente con un emoji, por ejemplo:\n"
+    "<code>/nueva_categoria 🚙 Auto</code>\n"
+    "<code>/nueva_categoria ingreso 🎓 Becas</code>"
+)
 
 
 def _percentage(part: int, total: int) -> str:
