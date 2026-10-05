@@ -182,7 +182,8 @@ async def test_daily_limit_and_usage(
     await ai_harness.send("/ia")
     assert "Hoy: 3 de 3 consultas" in ai_harness.last_reply
     assert "2.700 tokens de entrada" in ai_harness.last_reply
-    assert "Costo estimado del mes: US$ 0,0008" in ai_harness.last_reply
+    # 3 x (900 x 0.10 + 60 x 0.50) micro-dollars with gpt-6-luna
+    assert "Costo estimado del mes: US$ 0,0004" in ai_harness.last_reply
 
 
 async def test_usage_warns_about_a_model_without_a_known_price(

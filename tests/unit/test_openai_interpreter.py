@@ -33,7 +33,7 @@ def _response_body(
         "object": "response",
         "created_at": 1_790_000_000,
         "status": status,
-        "model": "gpt-5.4-nano-2026-03-17",
+        "model": "gpt-6-luna",
         "output": [
             {
                 "id": "msg_test",
@@ -62,7 +62,7 @@ def _interpreter(handler: Handler) -> OpenAIInterpreter:
         http_client=httpx2.AsyncClient(transport=httpx2.MockTransport(handler)),
         max_retries=0,
     )
-    return OpenAIInterpreter(client, "gpt-5.4-nano")
+    return OpenAIInterpreter(client, "gpt-6-luna")
 
 
 async def test_sends_a_small_private_strict_request() -> None:
@@ -77,7 +77,7 @@ async def test_sends_a_small_private_strict_request() -> None:
     )
 
     (body,) = requests
-    assert body["model"] == "gpt-5.4-nano"
+    assert body["model"] == "gpt-6-luna"
     assert body["store"] is False
     assert body["max_output_tokens"] == 600
     assert body["reasoning"] == {"effort": "none"}
