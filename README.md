@@ -1,7 +1,7 @@
 # Bot Asistente
 
 Bot de Telegram personal para registrar gastos e ingresos en pesos argentinos y llevar la
-rutina del gimnasio, escribiendo mensajes como `uber 2000` o `gym 47.000`.
+rutina del gimnasio, escribiendo (o dictando) mensajes como `uber 2000` o `gym 47.000`.
 
 - Plan y fases: [docs/ROADMAP.md](docs/ROADMAP.md)
 - Arquitectura, modelo de datos y seguridad: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
@@ -64,13 +64,27 @@ con **una sola consulta** por mensaje:
 `uber 2000`, `borrar uber 2000` o `pecho: banco plano 4x12` **nunca** usan la IA: las reglas
 son gratis e instantáneas.
 
+### Audios
+
+Con la IA activada también podés mandar **audios de hasta un minuto**. El bot te muestra lo
+que entendió (🎙 _Uber, 2000 pesos._) y lo procesa igual que un mensaje escrito: si las
+reglas lo entienden no hace otra consulta, y si no, lo interpreta la IA.
+
+- Transcribe `gpt-4o-mini-transcribe`, el más barato: US$0,003 por minuto (un audio de
+  10 segundos cuesta US$0,0005). `gpt-transcribe` es más preciso y cuesta 50% más.
+- Los montos y las series se dictan igual que se escriben: «uber dos mil», «banco plano
+  cuatro por doce con sesenta kilos».
+- El audio se descarga en memoria y solo se envía a OpenAI para transcribirlo: el bot no
+  lo guarda.
+- Cada audio cuenta como una consulta en el tope diario y aparece en `/ia`.
+
 Seguridad y costo:
 
 - La respuesta tiene que cumplir un esquema JSON estricto y se valida antes de actuar: los
   importes tienen que estar en tu mensaje y fechas y números se vuelven a leer con las reglas.
 - Borrar siempre pide confirmación; editar muestra el antes y después y espera tu OK.
-- `store=false`: OpenAI no guarda los pedidos. Solo se envían el mensaje, tus categorías y
-  los nombres de tus ejercicios.
+- `store=false`: OpenAI no guarda las interpretaciones. Solo se envían el mensaje (o el
+  audio), tus categorías y los nombres de tus ejercicios.
 - Tope diario (`AI_DAILY_LIMIT`), timeout y salida limitada. Costo aproximado: entre US$0,06
   y US$0,20 cada 1.000 consultas, según cuánto aproveche el caché de OpenAI. `/ia` muestra el
   costo real del mes.
@@ -99,9 +113,10 @@ Copiá `.env.example` a `.env` y completalo. `.env` está en `.gitignore`: nunca
 | `DATABASE_URL` | No | Por defecto `./data/asistente.db` en local y `/data/asistente.db` (el volumen) en Docker |
 | `TIMEZONE` | No | Por defecto `America/Argentina/Buenos_Aires` |
 | `LOG_LEVEL` | No | `DEBUG`, `INFO` (por defecto), `WARNING` o `ERROR` |
-| `OPENAI_API_KEY` | No | Activa la IA para mensajes libres. Sin key, solo reglas |
+| `OPENAI_API_KEY` | No | Activa la IA para mensajes libres y audios. Sin key, solo reglas |
 | `OPENAI_MODEL` | No | Por defecto `gpt-6-luna`, el más barato |
-| `AI_DAILY_LIMIT` | No | Consultas a la IA por día (por defecto 100; `0` la desactiva) |
+| `OPENAI_TRANSCRIPTION_MODEL` | No | Por defecto `gpt-4o-mini-transcribe`, el más barato |
+| `AI_DAILY_LIMIT` | No | Consultas a la IA por día, textos y audios (por defecto 100; `0` la desactiva) |
 
 Si el bot no te responde, revisá los logs: cada mensaje de un usuario no autorizado se
 registra con su ID.
