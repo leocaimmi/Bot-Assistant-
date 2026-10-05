@@ -4,8 +4,11 @@ from pathlib import Path
 import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from asistente.bot.app import build_dispatcher
 from asistente.db.engine import create_engine, create_session_factory
 from asistente.db.registry import Base
+from tests.factories import make_settings
+from tests.harness import BotHarness
 
 
 @pytest.fixture
@@ -33,3 +36,9 @@ async def session(
 ) -> AsyncIterator[AsyncSession]:
     async with session_factory() as session:
         yield session
+
+
+@pytest.fixture
+def harness(session_factory: async_sessionmaker[AsyncSession]) -> BotHarness:
+    settings = make_settings()
+    return BotHarness(build_dispatcher(settings, session_factory))
