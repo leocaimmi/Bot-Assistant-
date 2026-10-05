@@ -49,6 +49,32 @@ Primero las series y después las repeticiones; el peso es opcional.
 
 Cada entrenamiento anotado trae un botón **Deshacer**.
 
+### IA (opcional)
+
+Con `OPENAI_API_KEY` configurada, lo que las reglas no entienden lo interpreta `gpt-5.4-nano`
+con **una sola consulta** por mensaje:
+
+| Mensaje | Resultado |
+| ------- | --------- |
+| `el uber de ayer eran 2500` | Muestra «Importe: $2.000 → $2.500» y espera tu confirmación |
+| `gasté dos lucas en el super` | Gasto de $2.000 en Supermercado |
+| `hice press plano 4 de 12 con 60 y fondos 3 de 10` | Anota el entrenamiento |
+| `/ia` | Consultas de hoy y del mes, tokens y costo estimado |
+
+`uber 2000`, `borrar uber 2000` o `pecho: banco plano 4x12` **nunca** usan la IA: las reglas
+son gratis e instantáneas.
+
+Seguridad y costo:
+
+- La respuesta tiene que cumplir un esquema JSON estricto y se valida antes de actuar: los
+  importes tienen que estar en tu mensaje y fechas y números se vuelven a leer con las reglas.
+- Borrar siempre pide confirmación; editar muestra el antes y después y espera tu OK.
+- `store=false`: OpenAI no guarda los pedidos. Solo se envían el mensaje, tus categorías y
+  los nombres de tus ejercicios.
+- Tope diario (`AI_DAILY_LIMIT`), timeout y salida limitada. Costo aproximado: US$0,25 cada
+  1.000 consultas.
+- Recomendado: crear la key en un proyecto propio de OpenAI con límite de gasto mensual.
+
 ## Requisitos
 
 - [uv](https://docs.astral.sh/uv/) (instala Python 3.12 y las dependencias)
@@ -72,6 +98,9 @@ Copiá `.env.example` a `.env` y completalo. `.env` está en `.gitignore`: nunca
 | `DATABASE_URL` | No | Por defecto `./data/asistente.db` en local y `/data/asistente.db` (el volumen) en Docker |
 | `TIMEZONE` | No | Por defecto `America/Argentina/Buenos_Aires` |
 | `LOG_LEVEL` | No | `DEBUG`, `INFO` (por defecto), `WARNING` o `ERROR` |
+| `OPENAI_API_KEY` | No | Activa la IA para mensajes libres. Sin key, solo reglas |
+| `OPENAI_MODEL` | No | Por defecto `gpt-5.4-nano` |
+| `AI_DAILY_LIMIT` | No | Consultas a la IA por día (por defecto 100; `0` la desactiva) |
 
 Si el bot no te responde, revisá los logs: cada mensaje de un usuario no autorizado se
 registra con su ID.
@@ -102,8 +131,8 @@ docker compose up --build
    `railway.json` y construye con el `Dockerfile`.
 2. En el servicio: **Settings → Volumes → Add Volume** montado en `/data`.
    Sin volumen, la base se borra en cada deploy.
-3. En **Variables** cargá `BOT_TOKEN` y `ALLOWED_USER_IDS`. La imagen ya guarda la base
-   en `/data/asistente.db`, dentro del volumen.
+3. En **Variables** cargá `BOT_TOKEN` y `ALLOWED_USER_IDS` (y `OPENAI_API_KEY` si querés la
+   IA). La imagen ya guarda la base en `/data/asistente.db`, dentro del volumen.
 4. Activá los backups automáticos del volumen.
 5. Dejá **una sola réplica**: los volúmenes no admiten más y Telegram solo permite un
    proceso haciendo polling por bot.
