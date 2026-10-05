@@ -25,11 +25,11 @@ Un bot de Telegram de uso personal (un solo usuario) para:
 
 | Fase | Rama | Estado |
 | ---- | ---- | ------ |
-| 0. Base del repositorio | `chore/project-setup` | En curso |
-| 1. Núcleo del bot | `feat/bot-core` | En curso |
-| 2. Finanzas: movimientos | `feat/finance-transactions` | En curso |
-| 3. Finanzas: resumen mensual | `feat/finance-reports` | En curso |
-| 4. Finanzas: categorías y palabras clave | `feat/finance-categories` | En curso |
+| 0. Base del repositorio | `chore/project-setup` | Hecho, falta merge |
+| 1. Núcleo del bot | `feat/bot-core` | Hecho, falta merge |
+| 2. Finanzas: movimientos | `feat/finance-transactions` | Hecho, falta merge |
+| 3. Finanzas: resumen mensual | `feat/finance-reports` | Hecho, falta merge |
+| 4. Finanzas: categorías y palabras clave | `feat/finance-categories` | Hecho, falta merge |
 | 5. Gimnasio | `feat/gym-tracker` | Próxima sesión |
 | 6. Mejoras | varias | Backlog |
 
