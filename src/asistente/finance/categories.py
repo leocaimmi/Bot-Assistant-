@@ -1,6 +1,7 @@
 """Managing categories and the keywords that select them."""
 
 from dataclasses import dataclass
+from html import escape
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,7 +44,7 @@ class InvalidKeywordError(UserError):
 
 class KeywordIsAccountAliasError(UserError):
     def __init__(self, keyword: str, account: str) -> None:
-        super().__init__(f"«{keyword}» ya sirve para elegir la cuenta {account}.")
+        super().__init__(f"«{escape(keyword)}» ya sirve para elegir la cuenta {escape(account)}.")
 
 
 class InvalidCategoryNameError(UserError):
@@ -56,7 +57,7 @@ class InvalidCategoryNameError(UserError):
 
 class CategoryAlreadyExistsError(UserError):
     def __init__(self, name: str) -> None:
-        super().__init__(f"Ya existe la categoría {name}.")
+        super().__init__(f"Ya existe la categoría {escape(name)}.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,9 +102,8 @@ class CategoryService:
         if tokens and normalize(tokens[0]) in _KIND_WORDS:
             kind = _KIND_WORDS[normalize(tokens.pop(0))]
         emoji = DEFAULT_EMOJI
-        if tokens and not any(char.isalnum() for char in tokens[0]):
-            symbol = tokens.pop(0)
-            emoji = symbol if len(symbol) <= MAX_EMOJI_LENGTH else DEFAULT_EMOJI
+        if tokens and _is_emoji(tokens[0]):
+            emoji = tokens.pop(0)
 
         name = " ".join(tokens)
         if not normalize(name) or len(name) > MAX_CATEGORY_NAME_LENGTH:
@@ -151,3 +151,10 @@ class CategoryService:
     async def _all(self, user: User) -> list[Category]:
         query = select(Category).where(Category.user_id == user.id)
         return list(await self._session.scalars(query))
+
+
+def _is_emoji(token: str) -> bool:
+    """Short and made only of non-ASCII symbols, so it can never carry markup like ``<b>``."""
+    return len(token) <= MAX_EMOJI_LENGTH and all(
+        ord(char) > 127 and not char.isalnum() for char in token
+    )
