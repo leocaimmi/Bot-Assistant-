@@ -3,16 +3,16 @@
 from collections import Counter
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from asistente.ai import pricing
 from asistente.ai.models import AiUsage
+from asistente.ai.pricing import TokenUsage
 from asistente.core.errors import UserError
 from asistente.users.models import User
-
-# Price per million tokens (input, output) in USD, to estimate the cost in /ia.
-PRICES_PER_MILLION = {"gpt-5.4-nano": (0.20, 1.25)}
 
 
 class AiBudgetExceededError(UserError):
@@ -50,29 +50,36 @@ class UsageTotals:
     requests: int
     input_tokens: int
     output_tokens: int
+    cost_micro_usd: int
 
-    def cost_usd(self, model: str) -> float | None:
-        prices = PRICES_PER_MILLION.get(model)
-        if prices is None:
-            return None
-        input_price, output_price = prices
-        return (self.input_tokens * input_price + self.output_tokens * output_price) / 1_000_000
+    @property
+    def cost_usd(self) -> Decimal:
+        return Decimal(self.cost_micro_usd) / 1_000_000
 
 
 class AiUsageService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def record(self, user: User, day: date, *, input_tokens: int, output_tokens: int) -> None:
-        usage = await self._session.scalar(
+    async def record(self, user: User, day: date, *, model: str, usage: TokenUsage) -> None:
+        """Count one request, priced with ``model``'s current price (nothing if unknown)."""
+        row = await self._session.scalar(
             select(AiUsage).where(AiUsage.user_id == user.id, AiUsage.day == day)
         )
-        if usage is None:
-            usage = AiUsage(user_id=user.id, day=day, requests=0, input_tokens=0, output_tokens=0)
-            self._session.add(usage)
-        usage.requests += 1
-        usage.input_tokens += input_tokens
-        usage.output_tokens += output_tokens
+        if row is None:
+            row = AiUsage(
+                user_id=user.id,
+                day=day,
+                requests=0,
+                input_tokens=0,
+                output_tokens=0,
+                cost_micro_usd=0,
+            )
+            self._session.add(row)
+        row.requests += 1
+        row.input_tokens += usage.input_tokens
+        row.output_tokens += usage.output_tokens
+        row.cost_micro_usd += pricing.response_cost(model, usage) or 0
         await self._session.flush()
 
     async def totals(self, user: User, start: date, end: date) -> UsageTotals:
@@ -83,8 +90,9 @@ class AiUsageService:
                     func.coalesce(func.sum(AiUsage.requests), 0),
                     func.coalesce(func.sum(AiUsage.input_tokens), 0),
                     func.coalesce(func.sum(AiUsage.output_tokens), 0),
+                    func.coalesce(func.sum(AiUsage.cost_micro_usd), 0),
                 ).where(AiUsage.user_id == user.id, AiUsage.day >= start, AiUsage.day <= end)
             )
         ).one()
-        requests, input_tokens, output_tokens = (int(value) for value in row)
-        return UsageTotals(requests, input_tokens, output_tokens)
+        requests, input_tokens, output_tokens, cost_micro_usd = (int(value) for value in row)
+        return UsageTotals(requests, input_tokens, output_tokens, cost_micro_usd)

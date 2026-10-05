@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from asistente.ai.interpreter import InterpreterError
 from asistente.ai.schema import Intent
+from asistente.bot.app import build_dispatcher
 from asistente.bot.handlers import assistant
 from asistente.bot.handlers.free_text import CORRECTION_HELP, NOT_UNDERSTOOD
 from asistente.finance.models import Transaction
@@ -15,6 +16,7 @@ from tests.ai_factories import (
     movement,
     target,
 )
+from tests.factories import make_settings
 from tests.harness import BotHarness
 
 
@@ -181,6 +183,20 @@ async def test_daily_limit_and_usage(
     assert "Hoy: 3 de 3 consultas" in ai_harness.last_reply
     assert "2.700 tokens de entrada" in ai_harness.last_reply
     assert "Costo estimado del mes: US$ 0,0008" in ai_harness.last_reply
+
+
+async def test_usage_warns_about_a_model_without_a_known_price(
+    session_factory: async_sessionmaker[AsyncSession], fake_interpreter: FakeInterpreter
+) -> None:
+    settings = make_settings(openai_api_key="sk-test", openai_model="modelo-nuevo")
+    harness = BotHarness(build_dispatcher(settings, session_factory, fake_interpreter))
+    fake_interpreter.will_answer(interpretation(Intent.UNKNOWN))
+    await harness.send("mensaje raro")
+
+    await harness.send("/ia")
+
+    assert "Costo estimado del mes: US$ 0,0000" in harness.last_reply
+    assert "No sé el precio de modelo-nuevo" in harness.last_reply
 
 
 async def test_without_ai_corrections_are_never_registered(
