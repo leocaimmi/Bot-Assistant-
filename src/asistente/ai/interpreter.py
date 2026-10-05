@@ -109,9 +109,6 @@ class OpenAIInterpreter:
             raise InterpreterError
         return InterpretationResult(interpretation, _token_usage(response.usage))
 
-    async def close(self) -> None:
-        await self._client.close()
-
 
 def build_input(text: str, context: InterpreterContext) -> str:
     """Per-request part of the prompt: user context first, the message last."""
@@ -135,8 +132,3 @@ def _token_usage(usage: ResponseUsage | None) -> TokenUsage:
         cached_tokens=getattr(details, "cached_tokens", None) or 0,
         cache_write_tokens=getattr(details, "cache_write_tokens", None) or 0,
     )
-
-
-def create_interpreter(api_key: str, model: str) -> OpenAIInterpreter:
-    client = openai.AsyncOpenAI(api_key=api_key, timeout=20.0, max_retries=1)
-    return OpenAIInterpreter(client, model)

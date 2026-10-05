@@ -2,13 +2,15 @@
 
 import logging
 
+import openai
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from asistente.ai.interpreter import Interpreter, OpenAIInterpreter, create_interpreter
+from asistente.ai.client import create_client
+from asistente.ai.interpreter import Interpreter, OpenAIInterpreter
 from asistente.ai.usage import AiUsageService, DailyBudget
 from asistente.bot.commands import set_bot_commands
 from asistente.bot.errors import on_error
@@ -97,23 +99,24 @@ async def run_polling(settings: Settings) -> None:
     """Long polling: the bot pulls updates, so no HTTP port is exposed to the internet."""
     engine = create_engine(settings.database_url.get_secret_value())
     session_factory = create_session_factory(engine)
-    interpreter = _build_interpreter(settings)
+    openai_client = _build_openai_client(settings)
+    interpreter = OpenAIInterpreter(openai_client, settings.openai_model) if openai_client else None
     dispatcher = build_dispatcher(settings, session_factory, interpreter)
     bot = build_bot(settings)
     try:
         await set_up_existing_users(session_factory)
         await bot.delete_webhook(drop_pending_updates=False)
         await set_bot_commands(bot)
-        logger.info("Bot started (long polling, AI %s)", "on" if interpreter else "off")
+        logger.info("Bot started (long polling, AI %s)", "on" if openai_client else "off")
         await dispatcher.start_polling(bot, allowed_updates=dispatcher.resolve_used_update_types())
     finally:
-        if interpreter is not None:
-            await interpreter.close()
+        if openai_client is not None:
+            await openai_client.close()
         await engine.dispose()
         logger.info("Bot stopped")
 
 
-def _build_interpreter(settings: Settings) -> OpenAIInterpreter | None:
+def _build_openai_client(settings: Settings) -> openai.AsyncOpenAI | None:
     if not settings.ai_enabled or settings.openai_api_key is None:
         return None
-    return create_interpreter(settings.openai_api_key.get_secret_value(), settings.openai_model)
+    return create_client(settings.openai_api_key.get_secret_value())
