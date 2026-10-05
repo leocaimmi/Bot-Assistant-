@@ -4,7 +4,7 @@ import re
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
@@ -34,6 +34,26 @@ class Settings(DatabaseSettings):
     allowed_user_ids: Annotated[frozenset[int], NoDecode]
     timezone: str = "America/Argentina/Buenos_Aires"
     log_level: LogLevel = "INFO"
+
+    # Optional AI interpreter (OpenAI). Without a key the bot works with rules only.
+    openai_api_key: SecretStr | None = None
+    openai_model: str = Field(default="gpt-5.4-nano", min_length=1)
+    # Maximum AI interpretations per user and day (0 disables the AI).
+    ai_daily_limit: int = Field(default=100, ge=0, le=10_000)
+
+    @property
+    def ai_enabled(self) -> bool:
+        return self.openai_api_key is not None and self.ai_daily_limit > 0
+
+    def secret_values(self) -> list[str]:
+        """Every secret value, so logging can mask them."""
+        secrets = [self.bot_token, self.openai_api_key]
+        return [secret.get_secret_value() for secret in secrets if secret is not None]
+
+    @field_validator("openai_api_key", mode="before")
+    @classmethod
+    def _empty_key_is_none(cls, value: Any) -> Any:
+        return None if isinstance(value, str) and not value.strip() else value
 
     @field_validator("bot_token")
     @classmethod
