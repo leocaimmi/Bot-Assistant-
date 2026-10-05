@@ -6,6 +6,25 @@ rutina del gimnasio, escribiendo mensajes como `uber 2000` o `gym 47.000`.
 - Plan y fases: [docs/ROADMAP.md](docs/ROADMAP.md)
 - Arquitectura, modelo de datos y seguridad: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
+## Uso
+
+| Mensaje | Resultado |
+| ------- | --------- |
+| `uber 2000` | Gasto de $2.000 en 🚗 Transporte, cuenta Mercado Pago |
+| `gym 47.000` | Gasto de $47.000 en 🏋️ Gimnasio |
+| `transferencia utn 200.000` | Ingreso de $200.000 en 🔁 Transferencias |
+| `super 15.430,50 efectivo` | Gasto en 🛒 Supermercado pagado en Efectivo |
+| `nafta 30k ayer` | Gasto de $30.000 con fecha de ayer |
+| `+ 50000 venta bici` | El `+` fuerza ingreso; el `-` fuerza gasto |
+| `/movimientos [mes]` | Lista paginada; tocá un número para editarlo o borrarlo |
+
+Cada movimiento registrado llega con botones para cambiar la categoría, el importe, la
+descripción, la fecha, la cuenta o el tipo, y para borrarlo (con confirmación).
+
+Importes aceptados: `2000`, `2.000`, `1.500,50`, `2k`, `1,5k`, `200 mil`, `2 lucas`,
+`1 palo`. Fechas: `hoy`, `ayer`, `anteayer`, `15/09`, `15/09/2026`. Cuentas: `mp`,
+`mercado pago`, `efectivo`, `banco`.
+
 ## Requisitos
 
 - [uv](https://docs.astral.sh/uv/) (instala Python 3.12 y las dependencias)
