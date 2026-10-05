@@ -8,9 +8,10 @@ from asistente.bot.app import build_dispatcher
 from asistente.db.engine import create_engine, create_session_factory
 from asistente.db.registry import Base
 from asistente.finance.defaults import seed_defaults
+from asistente.finance.service import FinanceService
 from asistente.users.models import User
 from asistente.users.service import UserService
-from tests.factories import ALLOWED_USER_ID, make_settings
+from tests.factories import ALLOWED_USER_ID, BUENOS_AIRES, make_settings
 from tests.harness import BotHarness
 
 
@@ -47,6 +48,11 @@ async def user(session: AsyncSession) -> User:
     user, _ = await UserService(session).get_or_create(ALLOWED_USER_ID)
     await seed_defaults(session, user)
     return user
+
+
+@pytest.fixture
+def finance(session: AsyncSession) -> FinanceService:
+    return FinanceService(session, BUENOS_AIRES)
 
 
 @pytest.fixture
