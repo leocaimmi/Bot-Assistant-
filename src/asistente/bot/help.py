@@ -33,11 +33,12 @@ El peso es opcional. Grupos: pecho, espalda, piernas, hombros, bíceps, tríceps
 /ejercicios: tus ejercicios por músculo"""
 
 AI_HELP = """\
-<b>🤖 Mensajes libres (si la IA está activada)</b>
+<b>🤖 Mensajes libres y audios (si la IA está activada)</b>
 Lo que no entiendan las reglas lo interpreta la IA, por ejemplo:
 • <code>el uber de ayer eran 2500</code> (te muestro el cambio antes de aplicarlo)
 • <code>gasté dos lucas en el super</code>
 • <code>hice press plano 4 de 12 con 60 y fondos 3 de 10</code>
+🎙 O mandame un audio de hasta un minuto: te muestro lo que entendí y lo anoto.
 /ia: cuántas consultas usaste y cuánto cuestan"""
 
 GENERAL_HELP = """\
