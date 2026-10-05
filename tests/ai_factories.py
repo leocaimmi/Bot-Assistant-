@@ -12,6 +12,7 @@ from asistente.ai.schema import (
     Movement,
     Target,
 )
+from asistente.ai.transcriber import TranscriberError
 from asistente.gym.models import MuscleGroup
 
 
@@ -92,3 +93,21 @@ class FakeInterpreter:
         if isinstance(answer, InterpreterError):
             raise answer
         return InterpretationResult(answer, TokenUsage(input_tokens=900, output_tokens=60))
+
+
+class FakeTranscriber:
+    """Returns queued transcripts and records the audio it received."""
+
+    def __init__(self) -> None:
+        self.transcripts: list[str | TranscriberError] = []
+        self.audios: list[bytes] = []
+
+    def will_hear(self, *transcripts: str | TranscriberError) -> None:
+        self.transcripts.extend(transcripts)
+
+    async def transcribe(self, audio: bytes) -> str:
+        self.audios.append(audio)
+        transcript = self.transcripts.pop(0)
+        if isinstance(transcript, TranscriberError):
+            raise transcript
+        return transcript

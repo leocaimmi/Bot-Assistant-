@@ -12,7 +12,7 @@ from asistente.finance.service import FinanceService
 from asistente.gym.service import GymService
 from asistente.users.models import User
 from asistente.users.service import UserService
-from tests.ai_factories import FakeInterpreter
+from tests.ai_factories import FakeInterpreter, FakeTranscriber
 from tests.factories import ALLOWED_USER_ID, BUENOS_AIRES, make_settings
 from tests.harness import BotHarness
 
@@ -74,9 +74,17 @@ def fake_interpreter() -> FakeInterpreter:
 
 
 @pytest.fixture
+def fake_transcriber() -> FakeTranscriber:
+    return FakeTranscriber()
+
+
+@pytest.fixture
 def ai_harness(
-    session_factory: async_sessionmaker[AsyncSession], fake_interpreter: FakeInterpreter
+    session_factory: async_sessionmaker[AsyncSession],
+    fake_interpreter: FakeInterpreter,
+    fake_transcriber: FakeTranscriber,
 ) -> BotHarness:
-    """A bot with the AI enabled, backed by a fake interpreter (no real API calls)."""
+    """A bot with the AI enabled, backed by fakes (no real API calls)."""
     settings = make_settings(openai_api_key="sk-test", ai_daily_limit=3)
-    return BotHarness(build_dispatcher(settings, session_factory, fake_interpreter))
+    dispatcher = build_dispatcher(settings, session_factory, fake_interpreter, fake_transcriber)
+    return BotHarness(dispatcher)

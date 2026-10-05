@@ -13,14 +13,26 @@ from aiogram.methods import (
     AnswerCallbackQuery,
     EditMessageReplyMarkup,
     EditMessageText,
+    GetFile,
     SendMessage,
     TelegramMethod,
 )
 from aiogram.methods.base import TelegramType
-from aiogram.types import CallbackQuery, Chat, InlineKeyboardMarkup, Message, Update, User
+from aiogram.types import (
+    CallbackQuery,
+    Chat,
+    File,
+    InlineKeyboardMarkup,
+    Message,
+    Update,
+    User,
+    Voice,
+)
 
 from asistente.bot.errors import ERROR_TEXT
 from tests.factories import ALLOWED_USER_ID, TEST_BOT_TOKEN
+
+FAKE_AUDIO = b"OggS fake voice note"
 
 
 class RecordingSession(BaseSession):
@@ -29,6 +41,7 @@ class RecordingSession(BaseSession):
     def __init__(self) -> None:
         super().__init__()
         self.requests: list[TelegramMethod[Any]] = []
+        self.downloads = 0
         self._message_ids = count(1000)
 
     async def close(self) -> None:
@@ -43,15 +56,17 @@ class RecordingSession(BaseSession):
         self.requests.append(method)
         return self._fake_result(method)  # type: ignore[no-any-return]
 
-    def stream_content(
+    async def stream_content(
         self,
         url: str,
         headers: dict[str, Any] | None = None,
-        timeout: int = 30,
+        timeout: int = 30,  # noqa: ASYNC109 (signature defined by aiogram)
         chunk_size: int = 65536,
         raise_for_status: bool = True,
     ) -> AsyncGenerator[bytes, None]:
-        raise NotImplementedError("the harness does not download files")
+        """Every download is a voice note."""
+        self.downloads += 1
+        yield FAKE_AUDIO
 
     def _fake_result(self, method: TelegramMethod[Any]) -> Any:
         if isinstance(method, SendMessage | EditMessageText):
@@ -61,6 +76,12 @@ class RecordingSession(BaseSession):
                 date=datetime.now(UTC),
                 chat=Chat(id=int(method.chat_id or 0), type="private"),
                 text=method.text,
+            )
+        if isinstance(method, GetFile):
+            return File(
+                file_id=method.file_id,
+                file_unique_id=f"unique-{method.file_id}",
+                file_path=f"voice/{method.file_id}.oga",
             )
         return True
 
@@ -91,6 +112,26 @@ class BotHarness:
             chat=Chat(id=chat_id, type=chat_type),
             from_user=self._user(sender_id),
             text=text,
+        )
+        await self._feed(Update(update_id=update_id, message=message))
+
+    async def send_voice(
+        self, *, duration: int = 5, file_size: int = 20_000, user_id: int | None = None
+    ) -> None:
+        sender_id = user_id or self.user_id
+        update_id = next(self._update_ids)
+        message = Message(
+            message_id=update_id,
+            date=datetime.now(UTC),
+            chat=Chat(id=sender_id, type="private"),
+            from_user=self._user(sender_id),
+            voice=Voice(
+                file_id=f"voice-{update_id}",
+                file_unique_id=f"unique-voice-{update_id}",
+                duration=duration,
+                mime_type="audio/ogg",
+                file_size=file_size,
+            ),
         )
         await self._feed(Update(update_id=update_id, message=message))
 

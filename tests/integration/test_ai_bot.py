@@ -176,7 +176,7 @@ async def test_daily_limit_and_usage(
         await ai_harness.send("mensaje raro")
 
     await ai_harness.send("uno más")
-    assert "límite de 3 interpretaciones" in ai_harness.last_reply
+    assert "límite de 3 consultas" in ai_harness.last_reply
     assert len(fake_interpreter.texts) == 3
 
     await ai_harness.send("/ia")

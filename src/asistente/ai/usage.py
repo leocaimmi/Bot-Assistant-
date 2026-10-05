@@ -18,7 +18,7 @@ from asistente.users.models import User
 class AiBudgetExceededError(UserError):
     def __init__(self, limit: int) -> None:
         super().__init__(
-            f"Llegaste al límite de {limit} interpretaciones con IA por hoy. "
+            f"Llegaste al límite de {limit} consultas a la IA por hoy. "
             "Escribilo con el formato simple, por ejemplo <code>uber 2000</code>."
         )
 
