@@ -11,7 +11,8 @@ Mandá un mensaje con el gasto o el ingreso:
 • <code>+ 50000 venta bici</code>: el <code>+</code> fuerza ingreso y el <code>-</code> gasto
 
 Después tocá los botones para cambiar categoría, importe, fecha o borrarlo.
-/movimientos [mes]: lista para ver o editar movimientos"""
+/movimientos [mes]: lista para ver o editar movimientos
+/resumen [mes]: cuánto gastaste por categoría y cuánto ingresaste por cuenta"""
 
 GENERAL_HELP = """\
 <b>⚙️ General</b>
