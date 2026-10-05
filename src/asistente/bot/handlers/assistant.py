@@ -90,7 +90,10 @@ async def interpret(
         await message.answer(AI_UNAVAILABLE)
         return True
     await ai_usage.record(
-        user, today, input_tokens=result.input_tokens, output_tokens=result.output_tokens
+        user,
+        today,
+        input_tokens=result.usage.input_tokens,
+        output_tokens=result.usage.output_tokens,
     )
 
     try:

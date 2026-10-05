@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 
 from asistente.ai.interpreter import InterpretationResult, InterpreterContext, InterpreterError
+from asistente.ai.pricing import TokenUsage
 from asistente.ai.schema import (
     Changes,
     ExerciseDone,
@@ -90,4 +91,4 @@ class FakeInterpreter:
         answer = self.answers.pop(0)
         if isinstance(answer, InterpreterError):
             raise answer
-        return InterpretationResult(interpretation=answer, input_tokens=900, output_tokens=60)
+        return InterpretationResult(answer, TokenUsage(input_tokens=900, output_tokens=60))
