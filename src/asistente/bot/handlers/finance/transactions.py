@@ -61,7 +61,7 @@ async def change_page(
     user: User,
     settings: Settings,
 ) -> None:
-    month = (callback_data.year, callback_data.month) if callback_data.year else None
+    month = callback_data.period
     page = await finance.page(user, callback_data.page, month=month)
     await edit_or_send(
         callback,

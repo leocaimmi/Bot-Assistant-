@@ -9,7 +9,7 @@ from asistente.bot.handlers.finance.callbacks import (
     TxCategoryCallback,
     TxPageCallback,
 )
-from asistente.core.dates import MONTHS, shift_month
+from asistente.core.dates import MIN_YEAR, MONTHS, shift_month
 from asistente.finance.models import Account, Category, Transaction, TransactionKind
 from asistente.finance.reports import MonthlySummary
 from asistente.finance.service import TransactionPage
@@ -22,17 +22,20 @@ def summary_navigation(summary: MonthlySummary, current: tuple[int, int]) -> Inl
     following = shift_month(*month, 1)
 
     builder = InlineKeyboardBuilder()
-    builder.button(
-        text=f"◀️ {MONTHS[previous[1] - 1]}",
-        callback_data=SummaryCallback(year=previous[0], month=previous[1]),
-    )
-    sizes = [1]
+    navigation = 0
+    if previous >= (MIN_YEAR, 1):
+        builder.button(
+            text=f"◀️ {MONTHS[previous[1] - 1]}",
+            callback_data=SummaryCallback(year=previous[0], month=previous[1]),
+        )
+        navigation += 1
     if following <= current:
         builder.button(
             text=f"{MONTHS[following[1] - 1]} ▶️",
             callback_data=SummaryCallback(year=following[0], month=following[1]),
         )
-        sizes = [2]
+        navigation += 1
+    sizes = [navigation] if navigation else []
     if summary.transaction_count:
         builder.button(
             text="🧾 Ver movimientos",
