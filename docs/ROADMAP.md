@@ -30,8 +30,10 @@ Un bot de Telegram de uso personal (un solo usuario) para:
 | 2. Finanzas: movimientos | `feat/finance-transactions` | Hecho, falta merge |
 | 3. Finanzas: resumen mensual | `feat/finance-reports` | Hecho, falta merge |
 | 4. Finanzas: categorías y palabras clave | `feat/finance-categories` | Hecho, falta merge |
-| 5. Gimnasio | `feat/gym-tracker` | Próxima sesión |
-| 6. Mejoras | varias | Backlog |
+| 5. Gimnasio | `feat/gym-tracker` | Hecho, falta merge |
+| 6. Comandos de texto | `feat/text-commands` | Hecho, falta merge |
+| 7. IA para mensajes libres | `feat/ai-interpreter` | Hecho, falta merge |
+| 8. Mejoras | varias | Backlog |
 
 ### Fase 0: base del repositorio
 
@@ -71,27 +73,45 @@ Un bot de Telegram de uso personal (un solo usuario) para:
   (por ejemplo `/palabra nafta auto`).
 - `/nueva_categoria <nombre>`: crea categorías propias de gasto o ingreso.
 
-### Fase 5: gimnasio (próxima sesión)
+### Fase 5: gimnasio
 
 Modelo de datos:
 
-- `exercises`: catálogo de ejercicios del usuario (nombre normalizado, alias).
-- `workouts`: una sesión de entrenamiento (fecha, notas, inicio y fin).
-- `workout_sets`: cada serie (ejercicio, orden, repeticiones y peso en kg).
+- `exercises`: catálogo de ejercicios del usuario (nombre normalizado y grupo muscular).
+- `workouts`: el entrenamiento de un día.
+- `workout_entries`: series x repeticiones de un ejercicio, con peso opcional en gramos.
 
-Sintaxis prevista:
+Formato: primero las series y después las repeticiones; el peso es opcional.
 
 | Mensaje | Resultado |
 | ------- | --------- |
-| `/entreno` | Abre la sesión de hoy |
-| `press banca 4x10 60` | 4 series de 10 repeticiones con 60 kg |
-| `sentadilla 80x8 85x6 90x5` | 3 series con peso × repeticiones distintos |
-| `dominadas 3x12` | 3 series de 12 con peso corporal |
-| `/fin` | Cierra la sesión y muestra el resumen |
-| `/historial press banca` | Progresión del ejercicio y récord personal |
-| `/semana` | Días entrenados y volumen de la semana |
+| `pecho: banco plano 4x12 60kg, inclinado con mancuerna 3x8` | Anota 2 ejercicios de pecho |
+| `hice pecho banco plano 4 series de 12` | Mismo formato con palabras |
+| `ayer espalda: dominadas 4x8` | Con fecha |
+| `/entreno [día]` | Lo entrenado ese día, con botones para borrar |
+| `/semana` | Días entrenados y músculos de la semana |
+| `/historial banco plano` | Progresión y récord personal |
+| `/ejercicios` | Ejercicios agrupados por músculo |
 
-### Fase 6: mejoras (backlog)
+Grupos: pecho, espalda, piernas, hombros, bíceps, tríceps, abdominales. Cada entrenamiento
+anotado trae un botón "Deshacer".
+
+### Fase 6: comandos de texto
+
+Sin IA y sin costo: `borrar uber 2000`, `borrar el último` (con confirmación),
+`cambiar uber 2000 a 2500`, `cambiar uber a comida`, `cambiar uber 2000` (abre los botones).
+
+### Fase 7: IA para mensajes libres
+
+Modelo híbrido: las reglas resuelven gratis lo simple y solo lo que no entienden va a
+OpenAI (`gpt-5.4-nano`), con una consulta por mensaje:
+
+- Correcciones: `el uber de ayer eran 2500` muestra el antes y después y espera tu OK.
+- Gastos escritos libremente: `gasté dos lucas en el super`.
+- Entrenamientos libres: `hice press plano 4 de 12 con 60 y fondos 3 de 10`.
+- `/ia`: consultas del día y del mes, tokens y costo estimado.
+
+### Fase 8: mejoras (backlog)
 
 - Gastos recurrentes (por ejemplo, la cuota del gimnasio todos los meses).
 - Presupuestos por categoría con aviso al acercarse al límite.
@@ -133,6 +153,8 @@ Fechas aceptadas: `hoy`, `ayer`, `anteayer`, `15/09`, `15/09/2026`.
 | Fechas | UTC en la base, Buenos Aires en pantalla | Comparaciones correctas y formato local |
 | Nafta | Categoría Transporte por defecto | Se puede mover con `/palabra nafta <categoría>` |
 | "transferencia" | Se toma como ingreso | Según el ejemplo `transferencia utn 200.000`; con `-` adelante se fuerza gasto |
+| Gimnasio | `4x12` = 4 series de 12 | Así lo escribís vos: primero las series |
+| IA | Híbrida, `gpt-5.4-nano`, opcional | Lo simple con reglas (gratis e instantáneo); la IA solo para lo que las reglas no entienden, con salida validada y confirmación para editar o borrar |
 
 ## Flujo de trabajo con Git
 
@@ -140,6 +162,7 @@ Fechas aceptadas: `hoy`, `ayer`, `anteayer`, `15/09`, `15/09/2026`.
 - Conventional Commits en inglés (`feat:`, `fix:`, `chore:`, `docs:`, `test:`, `ci:`, `build:`).
 - Las ramas de código están apiladas porque cada una depende de la anterior:
   `main` ← `chore/project-setup` ← `feat/bot-core` ← `feat/finance-transactions`
-  ← `feat/finance-reports` ← `feat/finance-categories`.
+  ← `feat/finance-reports` ← `feat/finance-categories` ← `feat/gym-tracker`
+  ← `feat/text-commands` ← `feat/ai-interpreter`.
 - Orden de merge a `main`: `docs/project-plan` (independiente) y después las ramas de
   código en el orden de la cadena.
