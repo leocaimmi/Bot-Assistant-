@@ -32,11 +32,19 @@ El peso es opcional. Grupos: pecho, espalda, piernas, hombros, bíceps, tríceps
 /historial banco plano: progreso y récord de un ejercicio
 /ejercicios: tus ejercicios por músculo"""
 
+AI_HELP = """\
+<b>🤖 Mensajes libres (si la IA está activada)</b>
+Lo que no entiendan las reglas lo interpreta la IA, por ejemplo:
+• <code>el uber de ayer eran 2500</code> (te muestro el cambio antes de aplicarlo)
+• <code>gasté dos lucas en el super</code>
+• <code>hice press plano 4 de 12 con 60 y fondos 3 de 10</code>
+/ia: cuántas consultas usaste y cuánto cuestan"""
+
 GENERAL_HELP = """\
 <b>⚙️ General</b>
 /ayuda: esta ayuda
 /cancelar: cancela la acción en curso"""
 
-HELP_SECTIONS = (FINANCE_HELP, GYM_HELP, GENERAL_HELP)
+HELP_SECTIONS = (FINANCE_HELP, GYM_HELP, AI_HELP, GENERAL_HELP)
 
 HELP_TEXT = "\n\n".join(HELP_SECTIONS)

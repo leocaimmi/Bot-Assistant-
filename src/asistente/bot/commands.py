@@ -11,6 +11,7 @@ BOT_COMMANDS = (
     BotCommand(command="semana", description="Días entrenados esta semana"),
     BotCommand(command="historial", description="Progreso de un ejercicio"),
     BotCommand(command="ejercicios", description="Tus ejercicios por músculo"),
+    BotCommand(command="ia", description="Uso y costo de la IA"),
     BotCommand(command="ayuda", description="Cómo usar el bot"),
     BotCommand(command="cancelar", description="Cancelar la acción en curso"),
 )
