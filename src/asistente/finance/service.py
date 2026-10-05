@@ -19,6 +19,7 @@ from asistente.finance.models import (
     TransactionKind,
 )
 from asistente.finance.parser import parse_entry
+from asistente.finance.reports import MonthlySummary, build_summary
 from asistente.finance.repository import FinanceRepository
 from asistente.users.models import User
 
@@ -117,6 +118,13 @@ class FinanceService:
             user.id, limit=PAGE_SIZE, offset=number * PAGE_SIZE, start=start, end=end
         )
         return TransactionPage(items=items, number=number, total=total)
+
+    async def monthly_summary(self, user: User, year: int, month: int) -> MonthlySummary:
+        start, end = month_range(year, month, self._tz)
+        rows = await self._repository.totals(user.id, start=start, end=end)
+        categories = {category.id: category for category in await self.categories(user)}
+        accounts = {account.id: account for account in await self.accounts(user)}
+        return build_summary(year, month, rows, categories, accounts)
 
     async def categories(self, user: User, kind: TransactionKind | None = None) -> list[Category]:
         return await self._repository.categories(user.id, kind)
