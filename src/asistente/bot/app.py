@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from asistente.bot.commands import set_bot_commands
 from asistente.bot.errors import on_error
-from asistente.bot.handlers import common, fallback
+from asistente.bot.handlers import common, fallback, finance
 from asistente.bot.middlewares import (
     AccessMiddleware,
     CommandResetsStateMiddleware,
@@ -20,12 +20,13 @@ from asistente.bot.middlewares import (
 )
 from asistente.config import Settings
 from asistente.db.engine import create_engine, create_session_factory
+from asistente.finance.defaults import seed_defaults
 from asistente.users.service import UserService
 
 logger = logging.getLogger(__name__)
 
 # Data each module prepares for a user (see UserSetupHook).
-USER_SETUP_HOOKS: tuple[UserSetupHook, ...] = ()
+USER_SETUP_HOOKS: tuple[UserSetupHook, ...] = (seed_defaults,)
 
 
 def build_dispatcher(
@@ -43,6 +44,7 @@ def build_dispatcher(
 
     dispatcher.include_routers(
         common.build_router(),
+        finance.build_router(),
         fallback.build_router(),  # must stay last
     )
     dispatcher.errors.register(on_error)
