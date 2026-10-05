@@ -12,7 +12,10 @@ Mandá un mensaje con el gasto o el ingreso:
 
 Después tocá los botones para cambiar categoría, importe, fecha o borrarlo.
 /movimientos [mes]: lista para ver o editar movimientos
-/resumen [mes]: cuánto gastaste por categoría y cuánto ingresaste por cuenta"""
+/resumen [mes]: cuánto gastaste por categoría y cuánto ingresaste por cuenta
+/categorias: categorías y las palabras que las eligen
+/palabra nafta transporte: enseñarme una palabra o moverla de categoría
+/nueva_categoria 🚙 Auto: crear una categoría (<code>ingreso</code> adelante para ingresos)"""
 
 GENERAL_HELP = """\
 <b>⚙️ General</b>
