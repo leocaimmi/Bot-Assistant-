@@ -285,21 +285,39 @@ async def show_usage(
     today = message.date.astimezone(settings.tz).date()
     today_totals = await ai_usage.totals(user, today, today)
     month = await ai_usage.totals(user, today.replace(day=1), today)
+    text_model = escape(settings.openai_model)
+    voice_model = escape(settings.openai_transcription_model)
     lines = [
-        f"🤖 <b>Uso de IA</b> ({escape(settings.openai_model)})",
-        f"Hoy: {today_totals.requests} de {settings.ai_daily_limit} consultas",
-        f"Este mes: {month.requests} consultas · {_thousands(month.input_tokens)} tokens de "
-        f"entrada · {_thousands(month.output_tokens)} de salida",
-        f"Costo estimado del mes: US$ {month.cost_usd:.4f}".replace(".", ","),
+        "🤖 <b>Uso de IA</b>",
+        f"Hoy: {today_totals.calls} de {settings.ai_daily_limit} consultas",
+        "",
+        "<b>Este mes</b>",
+        f"💬 {_count(month.requests, 'texto', 'textos')} ({text_model}): "
+        f"{_thousands(month.input_tokens)} tokens de entrada · "
+        f"{_thousands(month.output_tokens)} de salida",
+        f"🎙 {_count(month.transcriptions, 'audio', 'audios')} ({voice_model}): "
+        f"{_duration(month.audio_seconds)}",
+        f"💵 Costo estimado: US$ {month.cost_usd:.4f}".replace(".", ","),
     ]
-    if not pricing.has_price(settings.openai_model):
-        model = escape(settings.openai_model)
-        lines.append(f"⚠️ No sé el precio de {model}: lo que usa no suma al costo.")
+    models = (settings.openai_model, settings.openai_transcription_model)
+    if unpriced := [escape(model) for model in models if not pricing.has_price(model)]:
+        lines.append(f"⚠️ No sé el precio de {', '.join(unpriced)}: lo que usa no suma al costo.")
     await message.answer("\n".join(lines))
 
 
 def _thousands(number: int) -> str:
     return f"{number:,}".replace(",", ".")
+
+
+def _count(number: int, singular: str, plural: str) -> str:
+    return f"{number} {singular if number == 1 else plural}"
+
+
+def _duration(seconds: int) -> str:
+    minutes, rest = divmod(seconds, 60)
+    if not minutes:
+        return f"{rest} s"
+    return f"{minutes} min {rest} s" if rest else f"{minutes} min"
 
 
 def build_router() -> Router:
