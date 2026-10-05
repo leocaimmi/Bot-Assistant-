@@ -38,6 +38,8 @@ _VERBS = {
 }
 _STOP_WORDS = {"el", "la", "los", "las", "un", "una", "de", "del", "al", "mi", "movimiento"}
 _LATEST_WORDS = {"ultimo", "ultima"}
+# "el uber eran 2500", "en vez de 2000": corrections, never a new movement.
+_CORRECTION_WORDS = {"era", "eran", "vez", "lugar", "equivoque", "equivocado", "equivocada"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,6 +66,10 @@ def parse_command(text: str) -> TextCommand | None:
     first, _, rest = text.strip().partition(" ")
     kind = _VERBS.get(normalize(first))
     return TextCommand(kind=kind, rest=rest.strip()) if kind is not None else None
+
+
+def looks_like_correction(text: str) -> bool:
+    return any(word in _CORRECTION_WORDS for word in normalize(text).split())
 
 
 def split_new_value(rest: str) -> tuple[str, str] | None:
