@@ -1,0 +1,24 @@
+# Optional: run the production image locally with `docker compose up --build`.
+# Secrets come from your local .env file (never committed).
+services:
+  bot:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:////data/asistente.db
+    volumes:
+      - bot-data:/data
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      # Only what the entrypoint needs to own the volume and drop privileges.
+      - CHOWN
+      - SETUID
+      - SETGID
+
+volumes:
+  bot-data:
