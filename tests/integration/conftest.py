@@ -9,6 +9,7 @@ from asistente.db.engine import create_engine, create_session_factory
 from asistente.db.registry import Base
 from asistente.finance.defaults import seed_defaults
 from asistente.finance.service import FinanceService
+from asistente.gym.service import GymService
 from asistente.users.models import User
 from asistente.users.service import UserService
 from tests.factories import ALLOWED_USER_ID, BUENOS_AIRES, make_settings
@@ -53,6 +54,11 @@ async def user(session: AsyncSession) -> User:
 @pytest.fixture
 def finance(session: AsyncSession) -> FinanceService:
     return FinanceService(session, BUENOS_AIRES)
+
+
+@pytest.fixture
+def gym(session: AsyncSession) -> GymService:
+    return GymService(session)
 
 
 @pytest.fixture
