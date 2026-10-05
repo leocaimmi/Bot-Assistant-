@@ -63,7 +63,8 @@ class TargetQuery:
 
 
 def parse_command(text: str) -> TextCommand | None:
-    first, _, rest = text.strip().partition(" ")
+    # Any whitespace ends the verb: a dictated "Borrar. El uber" arrives as two lines.
+    first, _, rest = " ".join(text.split()).partition(" ")
     kind = _VERBS.get(normalize(first))
     return TextCommand(kind=kind, rest=rest.strip()) if kind is not None else None
 

@@ -19,6 +19,7 @@ TODAY = date(2026, 10, 5)
     ("text", "expected"),
     [
         ("borrar uber 2000", TextCommand(CommandKind.DELETE, "uber 2000")),
+        ("Borrar\nel uber de 2000", TextCommand(CommandKind.DELETE, "el uber de 2000")),
         ("Eliminá el gym", TextCommand(CommandKind.DELETE, "el gym")),
         ("anular netflix", TextCommand(CommandKind.DELETE, "netflix")),
         ("cambiar uber 2000 a 2500", TextCommand(CommandKind.EDIT, "uber 2000 a 2500")),
