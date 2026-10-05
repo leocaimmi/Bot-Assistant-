@@ -22,6 +22,7 @@ src/asistente/
 ├── logging_config.py      # Logging con enmascarado de secretos
 ├── core/                  # Utilidades puras, sin I/O
 │   ├── dates.py           # Zona horaria, meses en español, fechas relativas
+│   ├── errors.py          # UserError: errores con mensaje apto para el usuario
 │   ├── money.py           # Parseo y formato de pesos argentinos
 │   └── text.py            # Normalización (minúsculas, sin acentos)
 ├── db/                    # Infraestructura de persistencia
@@ -36,12 +37,16 @@ src/asistente/
 │   ├── parser.py          # "uber 2000 ayer" → ParsedEntry
 │   ├── matching.py        # Búsqueda de palabras clave
 │   ├── repository.py      # Acceso a datos (consultas)
-│   ├── service.py         # Reglas de negocio
+│   ├── service.py         # Reglas de negocio de los movimientos
+│   ├── categories.py      # Categorías y palabras clave
 │   └── reports.py         # Resumen mensual
 └── bot/                   # Adaptador de Telegram
     ├── app.py             # Arma Bot + Dispatcher y arranca el polling
     ├── commands.py        # Menú de comandos
-    ├── middlewares/       # Acceso, sesión de DB, usuario
+    ├── errors.py          # Respuesta ante errores (sin detalles internos)
+    ├── help.py            # Texto de /ayuda, una sección por módulo
+    ├── ui.py              # Editar o enviar mensajes, cortar textos largos
+    ├── middlewares/       # Acceso, sesión de DB, usuario, reseteo de pasos
     └── handlers/          # Un paquete por dominio (common, finance, ...)
 migrations/                # Alembic
 tests/                     # unit/ (lógica pura) e integration/ (DB + bot)
@@ -165,3 +170,7 @@ Al arrancar, el contenedor:
 - `tests/integration`: servicios contra una base SQLite temporal, un test que verifica que
   las migraciones coinciden con los modelos (upgrade y downgrade) y flujos completos del bot
   con un `Bot` simulado que no hace llamadas a Telegram.
+- Cualquier warning (por ejemplo, una deprecación) hace fallar los tests, para corregirlo
+  apenas aparece.
+- Cada commit pasa lint, tipos y tests por sí solo, así cualquier punto del historial
+  es desplegable y `git bisect` funciona.
