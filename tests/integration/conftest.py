@@ -7,7 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from asistente.bot.app import build_dispatcher
 from asistente.db.engine import create_engine, create_session_factory
 from asistente.db.registry import Base
-from tests.factories import make_settings
+from asistente.finance.defaults import seed_defaults
+from asistente.users.models import User
+from asistente.users.service import UserService
+from tests.factories import ALLOWED_USER_ID, make_settings
 from tests.harness import BotHarness
 
 
@@ -36,6 +39,14 @@ async def session(
 ) -> AsyncIterator[AsyncSession]:
     async with session_factory() as session:
         yield session
+
+
+@pytest.fixture
+async def user(session: AsyncSession) -> User:
+    """The allowed user, registered and with the default finance data."""
+    user, _ = await UserService(session).get_or_create(ALLOWED_USER_ID)
+    await seed_defaults(session, user)
+    return user
 
 
 @pytest.fixture
