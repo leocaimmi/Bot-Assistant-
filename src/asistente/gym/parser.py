@@ -122,6 +122,8 @@ def _parse_exercise(text: str, groups: list[MuscleGroup]) -> ExerciseItem | None
 
     # Whatever is not sets x reps (nor weight) is the exercise name.
     name_part = f"{text[: match.start()]} {text[match.end() :]}"
+    if _SETS_REPS.search(name_part) or _SERIES.search(name_part):
+        return None  # two exercises with no separator: "banco 4x12 inclinado 3x8"
     weight_text: str | None = None
     if (weight := _WEIGHT_WITH_UNIT.search(name_part)) is not None:
         weight_text = weight["kg"]

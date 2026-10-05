@@ -99,6 +99,7 @@ def test_reads_the_day() -> None:
         "monitor 24x7 15000",
         "pecho: banco plano 4x12, algo raro",
         "pecho: banco plano 4x12 99999kg",
+        "pecho: banco plano 4x12 inclinado 3x8",
     ],
 )
 def test_rejects_what_does_not_follow_the_format(text: str) -> None:
