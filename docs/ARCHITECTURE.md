@@ -6,7 +6,7 @@
 | ----- | ---------- |
 | Lenguaje | Python 3.12 (compatible con 3.11) |
 | Framework del bot | aiogram 3 (asyncio) |
-| IA (opcional) | OpenAI `gpt-5.4-nano` con Structured Outputs (SDK oficial `openai`) |
+| IA (opcional) | OpenAI `gpt-6-luna` con Structured Outputs y `gpt-4o-mini-transcribe` para audios (SDK oficial `openai`) |
 | Base de datos | SQLite (modo WAL) vía `aiosqlite` |
 | ORM y migraciones | SQLAlchemy 2 (async) + Alembic |
 | Configuración | pydantic-settings |
@@ -33,7 +33,7 @@ src/asistente/
 │   └── types.py           # UTCDateTime
 ├── users/                 # Dominio: usuarios
 ├── gym/                   # Dominio: gimnasio (modelos, parser 4x12, servicio)
-├── ai/                    # Intérprete opcional: esquema, OpenAI, validación, uso
+├── ai/                    # IA opcional: intérprete, transcripción, precios, validación, uso
 ├── finance/               # Dominio: finanzas
 │   ├── models.py          # Account, Category, CategoryKeyword, Transaction
 │   ├── defaults.py        # Categorías, palabras clave y cuentas iniciales
@@ -52,6 +52,7 @@ src/asistente/
     ├── middlewares/       # Acceso, sesión de DB, usuario, reseteo de pasos
     └── handlers/          # Un paquete por dominio (common, finance, gym, ...)
         ├── free_text.py   # Ruteo del texto libre: comando, gimnasio, gasto o IA
+        ├── voice.py       # Audios: los transcribe y siguen el camino del texto
         └── assistant.py   # Ejecuta lo que interpreta la IA (validado y confirmado)
 migrations/                # Alembic
 tests/                     # unit/ (lógica pura) e integration/ (DB + bot)
@@ -83,6 +84,9 @@ Cada update se procesa dentro de una única transacción: si el handler falla, s
 
 ```mermaid
 flowchart TD
+    VZ[Audio de hasta 1 minuto] --> T[1 consulta de transcripción]
+    T --> SH[Muestra lo que entendió]
+    SH --> C
     M[Mensaje de texto] --> C{"¿Empieza con borrar/cambiar?"}
     C -->|sí| TC[Comando de texto<br/>busca el movimiento]
     C -->|no| W{"¿Tiene series x reps<br/>en el formato?"}
@@ -99,6 +103,10 @@ flowchart TD
 Las reglas resuelven gratis y al instante la gran mayoría de los mensajes. La IA nunca
 ejecuta nada directamente: devuelve una intención que se valida (los importes tienen que
 estar en el mensaje; fechas y números se re-parsean) y lo destructivo pide confirmación.
+
+Un audio sigue el mismo camino: se transcribe con una consulta, el bot muestra lo que
+entendió y lo procesa como si lo hubieras escrito. Antes, cada oración pasa a ser una
+línea, así un entrenamiento dictado se separa en ejercicios igual que uno escrito.
 
 ## Modelo de datos (finanzas)
 
@@ -185,9 +193,12 @@ erDiagram
     ai_usage {
         int id PK
         date day UK
-        int requests
+        int requests "interpretaciones"
         bigint input_tokens
         bigint output_tokens
+        int transcriptions "audios"
+        int audio_seconds
+        bigint cost_micro_usd "con el precio del momento"
     }
 ```
 
@@ -206,8 +217,9 @@ erDiagram
 | Dependencias | Versiones fijadas en `uv.lock` y Dependabot semanal |
 | CI | Permisos mínimos (`contents: read`) y acciones fijadas por SHA |
 | Respuestas de la IA | Esquema JSON estricto, valores re-validados con las reglas propias, importes que deben estar en el mensaje, confirmación para editar y borrar |
-| Costo de la IA | Solo para lo que las reglas no entienden, tope diario en memoria (no lo saltea un rollback), salida limitada, timeout y estadísticas en `/ia` |
-| Privacidad con OpenAI | `store=false`, identificador de usuario hasheado, solo se envía el mensaje con categorías y nombres de ejercicios |
+| Costo de la IA | Solo para lo que las reglas no entienden, tope diario en memoria (no lo saltea un rollback) que también cuenta los audios, salida limitada, timeout y costo real por consulta en `/ia` |
+| Audios | Solo notas de voz de hasta 1 minuto y 1 MB, rechazadas antes de descargarlas; lo transcripto pasa por las mismas reglas y validaciones que un mensaje escrito |
+| Privacidad con OpenAI | `store=false`, identificador de usuario hasheado, solo se envía el mensaje (o el audio) con categorías y nombres de ejercicios; el audio se procesa en memoria y no se guarda |
 | Inyección de prompt | El mensaje va delimitado y sin `<` `>`; la IA no tiene herramientas ni puede ejecutar acciones |
 
 ## Despliegue en Railway
@@ -215,8 +227,8 @@ erDiagram
 1. Crear un servicio desde el repositorio de GitHub; Railway detecta `railway.json` y
    construye con el `Dockerfile`.
 2. Agregar un **Volume** montado en `/data`. Sin volumen, los datos se pierden en cada deploy.
-3. Variables del servicio: `BOT_TOKEN`, `ALLOWED_USER_IDS` y
-   `DATABASE_URL=sqlite+aiosqlite:////data/asistente.db`.
+3. Variables del servicio: `BOT_TOKEN`, `ALLOWED_USER_IDS` y, para la IA y los audios,
+   `OPENAI_API_KEY`. La imagen ya usa `/data/asistente.db` como base.
 4. Activar los backups automáticos del volumen.
 
 Al arrancar, el contenedor:
@@ -235,6 +247,8 @@ Al arrancar, el contenedor:
 - `tests/integration`: servicios contra una base SQLite temporal, un test que verifica que
   las migraciones coinciden con los modelos (upgrade y downgrade) y flujos completos del bot
   con un `Bot` simulado que no hace llamadas a Telegram.
+- La IA y la transcripción se prueban con el SDK real de OpenAI contra un transporte HTTP
+  simulado: se verifica exactamente qué se envía, sin costo.
 - Cualquier warning (por ejemplo, una deprecación) hace fallar los tests, para corregirlo
   apenas aparece.
 - Cada commit pasa lint, tipos y tests por sí solo, así cualquier punto del historial
