@@ -73,3 +73,5 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "-ra --strict-markers --strict-config"
+# Deprecations and other warnings fail the build so they get fixed right away.
+filterwarnings = ["error"]
