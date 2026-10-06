@@ -133,11 +133,12 @@ class BotHarness:
         ]
 
     def last_keyboard(self) -> InlineKeyboardMarkup:
+        """Most recent inline keyboard sent or edited by the bot."""
         for request in reversed(self.session.requests):
-            markup = getattr(request, "reply_markup", None)
             if isinstance(request, SendMessage | EditMessageText | EditMessageReplyMarkup):
-                assert isinstance(markup, InlineKeyboardMarkup), "last reply has no keyboard"
-                return markup
+                markup = request.reply_markup
+                if isinstance(markup, InlineKeyboardMarkup):
+                    return markup
         raise AssertionError("the bot did not send any keyboard")
 
     def button(self, label_part: str) -> str:

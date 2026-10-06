@@ -10,18 +10,20 @@ from asistente.bot.middlewares.base import Handler
 from asistente.users.models import User
 from asistente.users.service import UserService
 
-RegistrationHook = Callable[[AsyncSession, User], Awaitable[None]]
+# Prepares a module's data for a user (e.g. default categories). Must be idempotent:
+# it runs when the user registers and again for every user at each startup.
+UserSetupHook = Callable[[AsyncSession, User], Awaitable[None]]
 
 
 class UserMiddleware(BaseMiddleware):
     """Loads the current user (registering it on first contact) and exposes it as ``user``.
 
-    ``registration_hooks`` run once, right after a user is created, so each module can
-    prepare its own initial data without the core knowing about it.
+    ``setup_hooks`` run right after a user is created, so each module can prepare its own
+    initial data without the core knowing about it.
     """
 
-    def __init__(self, registration_hooks: Sequence[RegistrationHook] = ()) -> None:
-        self._registration_hooks = tuple(registration_hooks)
+    def __init__(self, setup_hooks: Sequence[UserSetupHook] = ()) -> None:
+        self._setup_hooks = tuple(setup_hooks)
 
     async def __call__(self, handler: Handler, event: TelegramObject, data: dict[str, Any]) -> Any:
         telegram_user: TelegramUser = data["event_from_user"]
@@ -29,7 +31,7 @@ class UserMiddleware(BaseMiddleware):
 
         user, created = await UserService(session).get_or_create(telegram_user.id)
         if created:
-            for hook in self._registration_hooks:
+            for hook in self._setup_hooks:
                 await hook(session, user)
 
         data["user"] = user
