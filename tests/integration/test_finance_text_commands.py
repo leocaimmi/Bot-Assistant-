@@ -1,8 +1,9 @@
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 import pytest
 
 from asistente.finance.service import (
+    AccountChange,
     AmountChange,
     CategoryChange,
     DayChange,
@@ -11,6 +12,7 @@ from asistente.finance.service import (
     NoMatchingTransactionError,
 )
 from asistente.users.models import User
+from tests.factories import BUENOS_AIRES
 
 NOW = datetime(2026, 10, 5, 17, 30, tzinfo=UTC)
 TODAY = date(2026, 10, 5)
@@ -68,3 +70,18 @@ async def test_resolve_and_apply_changes(finance: FinanceService, user: User) ->
         updated = await finance.apply_change(user, transaction.id, change)
     assert updated.amount_cents == 250_000
     assert updated.category.name == "Comida"
+
+
+async def test_changes_the_account_and_the_time(finance: FinanceService, user: User) -> None:
+    transaction = await finance.register(user, "uber 2000", now=NOW)
+
+    account = await finance.resolve_change(user, "efectivo", today=TODAY)
+    assert isinstance(account, AccountChange)
+    assert account.account.name == "Efectivo"
+
+    await finance.apply_change(user, transaction.id, account)
+    updated = await finance.apply_change(user, transaction.id, DayChange(TODAY, time(10, 0)))
+
+    local = updated.occurred_at.astimezone(BUENOS_AIRES)
+    assert (local.date(), local.hour, local.minute) == (TODAY, 10, 0)
+    assert updated.account.name == "Efectivo"

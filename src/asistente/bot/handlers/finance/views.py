@@ -9,6 +9,7 @@ from asistente.finance.categories import KeywordAssignment
 from asistente.finance.models import Category, Transaction, TransactionKind
 from asistente.finance.reports import Group, MonthlySummary
 from asistente.finance.service import (
+    AccountChange,
     AmountChange,
     CategoryChange,
     Change,
@@ -77,10 +78,15 @@ def change_field(transaction: Transaction, change: Change, tz: ZoneInfo) -> tupl
             return "Importe", format_ars(transaction.amount_cents)
         case CategoryChange():
             return "Categoría", escape(transaction.category.label)
-        case DayChange():
+        case DayChange(at=None):
             return "Fecha", f"{transaction.occurred_at.astimezone(tz):%d/%m/%Y}"
+        case DayChange():
+            return "Fecha", f"{transaction.occurred_at.astimezone(tz):%d/%m/%Y %H:%M}"
         case DescriptionChange():
             return "Descripción", escape(transaction.description or "-")
+        case AccountChange():
+            account = transaction.account
+            return "Cuenta", f"{account.emoji} {escape(account.name)}"
 
 
 def change_preview(transaction: Transaction, changes: list[Change], tz: ZoneInfo) -> str:
@@ -98,10 +104,14 @@ def _new_value(change: Change, tz: ZoneInfo) -> str:
             return format_ars(cents)
         case CategoryChange(category):
             return escape(category.label)
-        case DayChange(day):
+        case DayChange(day, None):
             return f"{day:%d/%m/%Y}"
+        case DayChange(day, at):
+            return f"{day:%d/%m/%Y} {at:%H:%M}"
         case DescriptionChange(description):
             return escape(description)
+        case AccountChange(account):
+            return f"{account.emoji} {escape(account.name)}"
 
 
 def deleted(transaction_id: int) -> str:

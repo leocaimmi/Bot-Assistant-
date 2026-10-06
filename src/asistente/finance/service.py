@@ -1,7 +1,7 @@
 """Business rules for transactions. Every operation is scoped to the given user."""
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, time
 from html import escape
 from math import ceil
 from zoneinfo import ZoneInfo
@@ -84,6 +84,7 @@ class CategoryChange:
 @dataclass(frozen=True, slots=True)
 class DayChange:
     day: date
+    at: time | None = None  # None keeps the time of day
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,7 +92,12 @@ class DescriptionChange:
     description: str
 
 
-Change = AmountChange | CategoryChange | DayChange | DescriptionChange
+@dataclass(frozen=True, slots=True)
+class AccountChange:
+    account: Account
+
+
+Change = AmountChange | CategoryChange | DayChange | DescriptionChange | AccountChange
 
 
 @dataclass(frozen=True, slots=True)
@@ -165,13 +171,15 @@ class FinanceService:
         return match
 
     async def resolve_change(self, user: User, text: str, *, today: date) -> Change | None:
-        """What ``"2500"``, ``"comida"`` or ``"ayer"`` would change; ``None`` if nothing."""
+        """What ``"2500"``, ``"comida"``, ``"ayer"`` or ``"efectivo"`` would change."""
         try:
             return AmountChange(parse_amount(text))
         except ValueError:
             pass
         if (day := parse_day(text, today)) is not None:
             return DayChange(day)
+        if (account := await self.find_account(user, text)) is not None:
+            return AccountChange(account)
         categories = {normalize(c.name): c for c in await self._repository.categories(user.id)}
         category = categories.get(normalize(text))
         return CategoryChange(category) if category is not None else None
@@ -182,10 +190,12 @@ class FinanceService:
                 return await self.change_amount(user, transaction_id, cents)
             case CategoryChange(category):
                 return await self.change_category(user, transaction_id, category.id)
-            case DayChange(day):
-                return await self.change_day(user, transaction_id, day)
+            case DayChange(day, at):
+                return await self.change_day(user, transaction_id, day, at=at)
             case DescriptionChange(description):
                 return await self.change_description(user, transaction_id, description)
+            case AccountChange(account):
+                return await self.change_account(user, transaction_id, account.id)
 
     async def get(self, user: User, transaction_id: int) -> Transaction:
         transaction = await self._repository.transaction(user.id, transaction_id)
@@ -217,6 +227,14 @@ class FinanceService:
     async def accounts(self, user: User) -> list[Account]:
         return await self._repository.accounts(user.id)
 
+    async def find_account(self, user: User, text: str) -> Account | None:
+        """The account called ``text`` ("mp", "efectivo", "Banco"), if any."""
+        wanted = normalize(text)
+        for account in await self._repository.accounts(user.id):
+            if wanted == normalize(account.name) or wanted in account.aliases:
+                return account
+        return None
+
     async def change_amount(self, user: User, transaction_id: int, cents: int) -> Transaction:
         if not 0 < cents <= MAX_AMOUNT_CENTS:
             raise InvalidAmountError
@@ -233,11 +251,13 @@ class FinanceService:
         await self._repository.flush()
         return transaction
 
-    async def change_day(self, user: User, transaction_id: int, day: date) -> Transaction:
-        """Move the transaction to another day, keeping its time of day."""
+    async def change_day(
+        self, user: User, transaction_id: int, day: date, *, at: time | None = None
+    ) -> Transaction:
+        """Move the transaction to another day, at ``at`` or keeping its time of day."""
         transaction = await self.get(user, transaction_id)
-        local_time = transaction.occurred_at.astimezone(self._tz).time()
-        transaction.occurred_at = at_local_time(day, local_time, self._tz)
+        clock = at if at is not None else transaction.occurred_at.astimezone(self._tz).time()
+        transaction.occurred_at = at_local_time(day, clock, self._tz)
         await self._repository.flush()
         return transaction
 
