@@ -8,6 +8,9 @@ rutina del gimnasio, escribiendo (o dictando) mensajes como `uber 2000` o `gym 4
 
 ## Uso
 
+En el bot, `/ayuda` abre un menú con un botón por tema (gastos, gimnasio, correcciones e IA)
+y ejemplos que se copian con un toque.
+
 | Mensaje | Resultado |
 | ------- | --------- |
 | `uber 2000` | Gasto de $2.000 en 🚗 Transporte, cuenta Mercado Pago |

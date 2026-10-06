@@ -1,51 +1,107 @@
-"""User-facing help text, one section per feature."""
+"""User-facing help: a short menu and one short card per topic, browsed with buttons."""
 
-FINANCE_HELP = """\
-<b>💸 Finanzas</b>
-Mandá un mensaje con el gasto o el ingreso:
-• <code>uber 2000</code>: gasto en Transporte
-• <code>gym 47.000</code>: gasto en Gimnasio
-• <code>transferencia utn 200.000</code>: ingreso
-• <code>super 15.430,50 efectivo</code>: indicando la cuenta
-• <code>nafta 30k ayer</code>: con fecha (<code>ayer</code>, <code>15/09</code>)
-• <code>+ 50000 venta bici</code>: el <code>+</code> fuerza ingreso y el <code>-</code> gasto
+from enum import StrEnum
 
-Después tocá los botones para cambiar categoría, importe, fecha o borrarlo, o escribí:
-• <code>borrar uber 2000</code> o <code>borrar el último</code>: lo borra (con confirmación)
-• <code>cambiar uber 2000 a 2500</code>, <code>cambiar uber a comida</code>: lo corrige
-• <code>cambiar uber 2000</code>: muestra los botones para editarlo
-/movimientos [mes]: lista para ver o editar movimientos
-/resumen [mes]: cuánto gastaste por categoría y cuánto ingresaste por cuenta
-/categorias: categorías y las palabras que las eligen
-/palabra nafta transporte: enseñarme una palabra o moverla de categoría
-/nueva_categoria 🚙 Auto: crear una categoría (<code>ingreso</code> adelante para ingresos)"""
 
-GYM_HELP = """\
-<b>🏋️ Gimnasio</b>
-Anotá lo que hiciste: primero las series y después las repeticiones.
-• <code>pecho: banco plano 4x12 60kg, inclinado con mancuerna 3x8</code>
-• <code>piernas: sentadilla 4x10 80kg; prensa 3x12</code>
-• <code>ayer espalda: dominadas 4x8</code>
-El peso es opcional. Grupos: pecho, espalda, piernas, hombros, bíceps, tríceps, abdominales.
-/entreno [día]: lo que entrenaste ese día
-/semana: días y músculos de esta semana
-/historial banco plano: progreso y récord de un ejercicio
-/ejercicios: tus ejercicios por músculo"""
+class HelpTopic(StrEnum):
+    MENU = "menu"
+    FINANCE = "finance"
+    GYM = "gym"
+    EDIT = "edit"
+    AI = "ai"
 
-AI_HELP = """\
-<b>🤖 Mensajes libres y audios (si la IA está activada)</b>
-Lo que no entiendan las reglas lo interpreta la IA, por ejemplo:
-• <code>el uber de ayer eran 2500</code> (te muestro el cambio antes de aplicarlo)
-• <code>gasté dos lucas en el super</code>
-• <code>hice press plano 4 de 12 con 60 y fondos 3 de 10</code>
-🎙 O mandame un audio de hasta un minuto: te muestro lo que entendí y lo anoto.
-/ia: cuántas consultas usaste y cuánto cuestan"""
 
-GENERAL_HELP = """\
-<b>⚙️ General</b>
-/ayuda: esta ayuda
-/cancelar: cancela la acción en curso"""
+# Button of each topic, in menu order.
+TOPIC_BUTTONS = {
+    HelpTopic.FINANCE: "💸 Gastos e ingresos",
+    HelpTopic.GYM: "🏋️ Gimnasio",
+    HelpTopic.EDIT: "✏️ Corregir y borrar",
+    HelpTopic.AI: "🤖 IA y audios",
+}
 
-HELP_SECTIONS = (FINANCE_HELP, GYM_HELP, AI_HELP, GENERAL_HELP)
+_MENU = """\
+📖 <b>¿Qué puedo hacer?</b>
+{how}
+<code>uber 2000</code> · anoto un gasto
+<code>transferencia utn 200.000</code> · un ingreso
+<code>pecho: banco plano 4x12 60kg</code> · un entrenamiento
 
-HELP_TEXT = "\n\n".join(HELP_SECTIONS)
+Tocá un tema para ver todo 👇
+/ayuda vuelve a este menú · /cancelar corta lo que estés haciendo"""
+
+_FINANCE = """\
+💸 <b>Gastos e ingresos</b>
+
+<b>Anotar</b>
+<code>uber 2000</code> · gasto
+<code>transferencia utn 200.000</code> · ingreso
+<code>super 15.430,50 efectivo</code> · con cuenta
+<code>nafta 30k ayer</code> · con fecha
+<code>+ 50000 venta bici</code> · fuerza ingreso (<code>-</code> fuerza gasto)
+
+<b>Ver</b>
+/resumen · el mes por categoría (<code>/resumen septiembre</code>)
+/movimientos · lista para ver y editar
+
+<b>Categorías</b>
+/categorias · las tuyas y sus palabras
+<code>/palabra nafta auto</code> · enseñame una palabra
+<code>/nueva_categoria 🚙 Auto</code> · crear una
+
+💡 Importes: <code>2.000</code> · <code>2k</code> · <code>200 mil</code> · <code>2 lucas</code>"""
+
+_GYM = """\
+🏋️ <b>Gimnasio</b>
+Primero las series y después las repeticiones; el peso es opcional.
+
+<b>Anotar</b>
+<code>pecho: banco plano 4x12 60kg</code>
+<code>piernas: sentadilla 4x10 80kg; prensa 3x12</code>
+<code>ayer espalda: dominadas 4x8</code>
+También vale <code>4 series de 12</code> o <code>4 por 12</code>.
+
+<b>Ver</b>
+/entreno · lo de hoy (<code>/entreno ayer</code>)
+/semana · días y músculos de la semana
+<code>/historial banco plano</code> · progreso y récord
+/ejercicios · tus ejercicios por músculo"""
+
+_EDIT = """\
+✏️ <b>Corregir y borrar</b>
+Cada movimiento trae botones para editarlo. También podés escribir:
+
+<code>cambiar uber 2000 a 2500</code> · el importe
+<code>cambiar uber a comida</code> · la categoría
+<code>cambiar uber 2000</code> · muestra los botones
+<code>borrar uber 2000</code> · pide confirmación
+<code>borrar el último</code> · el más reciente
+
+🏋️ Un entrenamiento se borra con <b>Deshacer</b> o desde /entreno."""
+
+_AI = """\
+🤖 <b>IA y audios</b>
+Lo que las reglas no entienden lo interpreta la IA:
+<code>gasté dos lucas en el super</code>
+<code>el uber eran 2500</code> · te muestro el cambio antes
+<code>hice press plano 4 de 12 con 60</code>
+
+🎙 Mandame un audio de hasta 1 minuto: te muestro lo que entendí y lo anoto.
+/ia · consultas y costo del mes"""
+
+_AI_OFF = "⚠️ Ahora está apagada: falta configurar <code>OPENAI_API_KEY</code>."
+
+_TOPICS = {
+    HelpTopic.FINANCE: _FINANCE,
+    HelpTopic.GYM: _GYM,
+    HelpTopic.EDIT: _EDIT,
+    HelpTopic.AI: _AI,
+}
+
+
+def help_text(topic: HelpTopic, *, ai_enabled: bool) -> str:
+    """Text of one help screen (HTML). Without AI, audio is not offered."""
+    if topic is HelpTopic.MENU:
+        return _MENU.format(how="Escribime o mandame un audio:" if ai_enabled else "Escribime:")
+    if topic is HelpTopic.AI and not ai_enabled:
+        return f"{_AI}\n\n{_AI_OFF}"
+    return _TOPICS[topic]
