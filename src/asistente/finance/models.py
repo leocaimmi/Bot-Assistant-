@@ -17,6 +17,7 @@ from asistente.db.base import Base, TimestampMixin
 from asistente.db.types import UTCDateTime
 
 MAX_DESCRIPTION_LENGTH = 120
+MAX_INSTALLMENTS = 120  # ten years of monthly payments
 
 
 class TransactionKind(StrEnum):
@@ -121,3 +122,45 @@ class Transaction(TimestampMixin, Base):
     @property
     def signed_cents(self) -> int:
         return self.amount_cents if self.kind is TransactionKind.INCOME else -self.amount_cents
+
+
+class RecurringPayment(TimestampMixin, Base):
+    """A movement the bot registers by itself every month: installments or a fixed payment.
+
+    Installments stop after ``installments`` charges ("zapatillas 2/9"); a fixed payment
+    (``installments`` is NULL, e.g. "seguro del celu") goes on until it is cancelled.
+    """
+
+    __tablename__ = "recurring_payments"
+    __table_args__ = (
+        CheckConstraint("amount_cents > 0", name="amount_positive"),
+        CheckConstraint("day_of_month BETWEEN 1 AND 31", name="day_of_month_range"),
+        CheckConstraint(
+            f"installments IS NULL OR installments BETWEEN 2 AND {MAX_INSTALLMENTS}",
+            name="installments_range",
+        ),
+        CheckConstraint("next_number >= 1", name="next_number_positive"),
+        # The scheduler looks for active payments that are due.
+        Index("ix_recurring_payments_active_next_run_at", "active", "next_run_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="RESTRICT"))
+    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id", ondelete="RESTRICT"))
+    description: Mapped[str] = mapped_column(String(MAX_DESCRIPTION_LENGTH), default="")
+    amount_cents: Mapped[int] = mapped_column(BigInteger)
+    day_of_month: Mapped[int]  # the last day in shorter months
+    installments: Mapped[int | None]  # how many in total; NULL for a fixed payment
+    next_number: Mapped[int]  # the next charge: 2 in "2/9"
+    next_run_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    active: Mapped[bool] = mapped_column(default=True)
+
+    account: Mapped[Account] = relationship(lazy="raise")
+    category: Mapped[Category] = relationship(lazy="raise")
+
+    def label(self, number: int) -> str:
+        """Description of charge ``number``: "zapatillas (2/9)" or the fixed description."""
+        if self.installments is None:
+            return self.description
+        return f"{self.description} ({number}/{self.installments})".strip()
