@@ -34,7 +34,8 @@ class Group:
     emoji: str
     name: str
     cents: int
-    details: tuple[Detail, ...]
+    details: tuple[Detail, ...]  # the biggest ones
+    hidden: int = 0  # how many other descriptions are not listed
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,5 +110,6 @@ def _groups(
             Detail(labels[detail_key], detail_cents)
             for detail_key, detail_cents in details[group_key].most_common(MAX_DETAILS)
         )
-        groups.append(Group(emoji=emoji, name=name, cents=cents, details=top_details))
+        hidden = len(details[group_key]) - len(top_details)
+        groups.append(Group(emoji, name, cents, top_details, hidden))
     return tuple(groups)

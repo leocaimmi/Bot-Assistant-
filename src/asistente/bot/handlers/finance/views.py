@@ -146,14 +146,18 @@ def monthly_summary(summary: MonthlySummary) -> str:
 
 
 def _group_lines(groups: tuple[Group, ...], *, total: int | None) -> list[str]:
+    """One line per detail, so a narrow phone screen never splits one in two."""
     lines = []
     for group in groups:
         share = f" ({_percentage(group.cents, total)})" if total else ""
         lines.append(f"{group.emoji} {escape(group.name)}: <b>{format_ars(group.cents)}</b>{share}")
-        details = " · ".join(
-            f"{escape(detail.label)} {format_ars(detail.cents)}" for detail in group.details
-        )
-        lines.append(f"    └ {details}")
+        items = [f"{escape(detail.label)}: {format_ars(detail.cents)}" for detail in group.details]
+        if group.hidden:
+            items.append(f"y {group.hidden} más")
+        lines += [
+            f"    {'└' if number == len(items) else '├'} {item}"
+            for number, item in enumerate(items, start=1)
+        ]
     return lines
 
 

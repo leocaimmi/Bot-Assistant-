@@ -23,7 +23,7 @@ async def test_summary_of_current_month(harness: BotHarness) -> None:
     assert "💸 <b>Gastaste $50.500</b>" in reply
     assert "🏋️ Gimnasio: <b>$47.000</b> (93%)" in reply
     assert "🚗 Transporte: <b>$3.500</b> (7%)" in reply
-    assert "uber $2.000 · sube $1.500" in reply
+    assert "    ├ uber: $2.000\n    └ sube: $1.500" in reply
     assert "💰 <b>Ingresaste $200.000</b>" in reply
     assert "📱 Mercado Pago: <b>$200.000</b>" in reply
     assert "Balance: <b>+$149.500</b>" in reply
@@ -57,3 +57,16 @@ async def test_invalid_month(harness: BotHarness) -> None:
     await harness.send("/resumen cualquiera")
 
     assert harness.last_reply == views.INVALID_SUMMARY_MONTH
+
+
+async def test_each_detail_has_its_own_line(harness: BotHarness) -> None:
+    for text in ("pague claude 34.000", "pague cloud apple 1.600", "varios 500", "otra cosa 100"):
+        await harness.send(text)
+
+    await harness.send("/resumen")
+
+    lines = harness.last_reply.splitlines()
+    assert "    ├ pague claude: $34.000" in lines
+    assert "    ├ pague cloud apple: $1.600" in lines
+    assert "    ├ varios: $500" in lines
+    assert "    └ y 1 más" in lines
