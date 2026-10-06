@@ -22,6 +22,10 @@ NOT_UNDERSTOOD = (
 )
 USE_THE_LIST = "⏰ Para ver o borrar recordatorios usá /recordatorios."
 DELETED = "🗑 Recordatorio borrado."
+EMPTY_LIST = (
+    "⏰ No tenés recordatorios.\nCreá uno así: <code>recordame mañana a las 9 pagar la luz</code>"
+)
+_LIST_TITLE_LENGTH = 60  # 30 reminders still fit in one message
 
 
 def created(reminder: Reminder, tz: ZoneInfo, *, now: datetime) -> str:
@@ -29,6 +33,21 @@ def created(reminder: Reminder, tz: ZoneInfo, *, now: datetime) -> str:
     lines = [f"⏰ <b>Te lo recuerdo:</b> {title(reminder)}", when(reminder, today)]
     if (other := other_zone(reminder, tz, today)) is not None:
         lines.append(other)
+    return "\n".join(lines)
+
+
+def reminder_list(reminders: Sequence[Reminder], tz: ZoneInfo, *, now: datetime) -> str:
+    if not reminders:
+        return EMPTY_LIST
+    today = now.astimezone(tz).date()
+    lines = ["⏰ <b>Tus recordatorios</b>", ""]
+    for number, reminder in enumerate(reminders, start=1):
+        name = title(reminder)
+        if len(reminder.text) > _LIST_TITLE_LENGTH:
+            name = escape(reminder.text[:1].upper() + reminder.text[1:_LIST_TITLE_LENGTH]) + "…"
+        zone = "" if reminder.timezone == tz.key else f" · hora de {zone_label(reminder.timezone)}"
+        lines += [f"{number}. <b>{name}</b>", f"    {when(reminder, today)}{zone}"]
+    lines += ["", "Tocá 🗑 para borrar uno."]
     return "\n".join(lines)
 
 

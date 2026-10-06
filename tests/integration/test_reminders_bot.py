@@ -67,3 +67,25 @@ async def test_a_dictated_reminder(
     await ai_harness.send_voice()
 
     assert "Te lo recuerdo:</b> Tengo que pagar la luz" in ai_harness.last_reply
+
+
+async def test_list_and_delete_from_the_list(
+    harness: BotHarness, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    await harness.send("/recordatorios")
+    assert harness.last_reply == views.EMPTY_LIST
+
+    await harness.send("recordame mañana a las 9 pagar la luz")
+    await harness.send("recordame todos los lunes a las 10 hora de España la call")
+    await harness.send("/recordatorios")
+    assert "⏰ <b>Tus recordatorios</b>" in harness.last_reply
+    assert "2. <b>" in harness.last_reply
+    assert "hora de Madrid" in harness.last_reply
+
+    await harness.click(harness.button("🗑 1"))
+    assert await _count(session_factory, Reminder) == 1
+    assert "1. <b>" in harness.last_reply
+    assert "2. <b>" not in harness.last_reply
+
+    await harness.click(harness.button("🗑 1"))
+    assert harness.last_reply == views.EMPTY_LIST

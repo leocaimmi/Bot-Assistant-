@@ -1,8 +1,9 @@
-"""Reminders: created from a message (typed or spoken), and their buttons."""
+"""Reminders: created from a message (typed or spoken), listed in /recordatorios."""
 
 from datetime import UTC, datetime
 
 from aiogram import Bot, F, Router
+from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
 from asistente.bot.handlers.reminders import keyboards, views
@@ -36,6 +37,31 @@ async def answer_created(message: Message, reminder: Reminder, settings: Setting
         views.created(reminder, settings.tz, now=message.date),
         reply_markup=keyboards.created(reminder.id),
     )
+
+
+async def list_reminders(
+    message: Message, reminders: ReminderService, user: User, settings: Settings
+) -> None:
+    items = await reminders.active(user)
+    await message.answer(
+        views.reminder_list(items, settings.tz, now=message.date),
+        reply_markup=keyboards.listed(items),
+    )
+
+
+async def delete_listed(
+    callback: CallbackQuery,
+    callback_data: ReminderCallback,
+    bot: Bot,
+    reminders: ReminderService,
+    user: User,
+    settings: Settings,
+) -> None:
+    await reminders.delete(user, callback_data.reminder_id)
+    items = await reminders.active(user)
+    text = views.reminder_list(items, settings.tz, now=datetime.now(UTC))
+    await edit_or_send(callback, bot, text, keyboards.listed(items))
+    await callback.answer("Borrado")
 
 
 async def delete(
@@ -80,6 +106,10 @@ async def snooze(
 
 def build_router() -> Router:
     router = Router(name="reminders")
+    router.message.register(list_reminders, Command("recordatorios"))
+    router.callback_query.register(
+        delete_listed, ReminderCallback.filter(F.action == ReminderAction.DELETE_LISTED)
+    )
     router.callback_query.register(
         mark_done, ReminderCallback.filter(F.action == ReminderAction.DONE)
     )
