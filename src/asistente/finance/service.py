@@ -35,7 +35,7 @@ SEARCH_WINDOW = 300
 class MissingTargetError(UserError):
     def __init__(self) -> None:
         super().__init__(
-            "Decime cuál, por ejemplo <code>borrar uber 2000</code> "
+            "🤔 Decime cuál, por ejemplo <code>cambiar uber 2000 a 2500</code> "
             "o <code>borrar el último</code>."
         )
 

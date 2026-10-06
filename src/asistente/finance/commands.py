@@ -42,6 +42,10 @@ _LATEST_WORDS = {"ultimo", "ultima"}
 _CORRECTION_WORDS = {"era", "eran", "vez", "lugar", "equivoque", "equivocado", "equivocada"}
 
 
+# Longer commands ("modificar la última transferencia y poner...") are left to the AI.
+MAX_SIMPLE_COMMAND_TOKENS = 8
+
+
 @dataclass(frozen=True, slots=True)
 class TextCommand:
     kind: CommandKind
@@ -69,8 +73,14 @@ def parse_command(text: str) -> TextCommand | None:
     return TextCommand(kind=kind, rest=rest.strip()) if kind is not None else None
 
 
+def is_simple_command(text: str) -> bool:
+    """Short enough for the rules: ``cambiar uber 2000 a 2500``, ``borrar el último``."""
+    return len(text.split()) <= MAX_SIMPLE_COMMAND_TOKENS
+
+
 def looks_like_correction(text: str) -> bool:
-    return any(word in _CORRECTION_WORDS for word in normalize(text).split())
+    """A correction ("eran 2500") or a command verb anywhere ("perdón, modificar...")."""
+    return any(word in _CORRECTION_WORDS or word in _VERBS for word in normalize(text).split())
 
 
 def split_new_value(rest: str) -> tuple[str, str] | None:

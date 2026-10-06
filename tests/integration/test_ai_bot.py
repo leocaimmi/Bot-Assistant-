@@ -36,6 +36,33 @@ async def test_rules_never_call_the_ai(
     assert fake_interpreter.texts == []
 
 
+async def test_long_or_unresolved_commands_go_to_the_ai(
+    ai_harness: BotHarness, fake_interpreter: FakeInterpreter
+) -> None:
+    await ai_harness.send("transferencia utn 276.000")
+    long_command = (
+        "Modificar la última transferencia al UTN poner 276.500 a las 10 de la mañana de hoy"
+    )
+    fake_interpreter.will_answer(
+        interpretation(
+            Intent.EDIT,
+            target=target("transferencia utn", latest=True),
+            changes=changes(amount="276.500"),
+        ),
+        interpretation(Intent.UNKNOWN),
+    )
+
+    await ai_harness.send(long_command)
+    assert "Importe: $276.000 → $276.500" in ai_harness.last_reply
+
+    await ai_harness.send("borrar netflix")  # short, but the rules find nothing
+    assert fake_interpreter.texts == [long_command, "borrar netflix"]
+
+    await ai_harness.send("cambiar transferencia a 300.000")  # short and clear: no AI
+    assert len(fake_interpreter.texts) == 2
+    assert "Importe: $276.000 → $300.000" in ai_harness.last_reply
+
+
 async def test_registers_a_free_form_expense(
     ai_harness: BotHarness, fake_interpreter: FakeInterpreter
 ) -> None:
@@ -242,6 +269,9 @@ async def test_without_ai_corrections_are_never_registered(
     harness: BotHarness, session_factory: async_sessionmaker[AsyncSession]
 ) -> None:
     await harness.send("el uber eran 2500")
+    assert harness.last_reply == CORRECTION_HELP
+
+    await harness.send("perdón, modificar y poner 276.500")
     assert harness.last_reply == CORRECTION_HELP
     assert await _amounts(session_factory) == []
 

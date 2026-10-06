@@ -18,9 +18,18 @@ from asistente.bot.handlers.finance import entries as finance_entries
 from asistente.bot.handlers.finance import text_commands
 from asistente.bot.handlers.gym import views as gym_views
 from asistente.config import Settings
-from asistente.finance.commands import looks_like_correction, parse_command
+from asistente.finance.commands import (
+    TextCommand,
+    is_simple_command,
+    looks_like_correction,
+    parse_command,
+)
 from asistente.finance.parser import MissingAmountError, is_simple_entry
-from asistente.finance.service import FinanceService
+from asistente.finance.service import (
+    FinanceService,
+    MissingTargetError,
+    NoMatchingTransactionError,
+)
 from asistente.gym.parser import looks_like_workout, parse_workout
 from asistente.gym.service import GymService
 from asistente.users.models import User
@@ -77,31 +86,13 @@ async def route_text(
     interpreter: Interpreter | None,
 ) -> None:
     """Act on ``text`` and answer ``message`` (whose text may be a transcript)."""
-    today = message.date.astimezone(settings.tz).date()
-
+    ai_on = interpreter is not None
     # Commands first: "borrar uber 2000" must not register a new expense.
     if (command := parse_command(text)) is not None:
-        await text_commands.handle_command(message, command, finance, user, settings.tz, state)
-        return
-
-    # Then workouts: "banco plano 4x12 60" must not become a $60 expense.
-    if (workout := parse_workout(text, today)) is not None:
-        logged = await gym.log(user, workout.items, day=workout.day or today)
-        await gym_handlers.answer_logged(message, logged, today)
-        return
-
-    # A plain amount is a transaction, unless it reads like a workout or a correction
-    # ("el uber eran 2500"): those are never registered as something new. With the AI on,
-    # only simple entries take this path; longer ones are better understood by the AI.
-    unclear = looks_like_workout(text) or looks_like_correction(text)
-    if not unclear and (interpreter is None or is_simple_entry(text)):
-        try:
-            transaction = await finance.register(user, text, now=message.date)
-        except MissingAmountError:
-            pass
-        else:
-            await finance_entries.answer_registered(message, transaction, settings.tz)
+        if await _run_command(message, command, text, finance, user, settings, state, ai_on=ai_on):
             return
+    elif await _run_rules(message, text, finance, gym, user, settings, ai_on=ai_on):
+        return
 
     if interpreter is not None and await assistant.interpret(
         message,
@@ -117,6 +108,62 @@ async def route_text(
     ):
         return
     await message.answer(_help_for(text))
+
+
+async def _run_command(
+    message: Message,
+    command: TextCommand,
+    text: str,
+    finance: FinanceService,
+    user: User,
+    settings: Settings,
+    state: FSMContext,
+    *,
+    ai_on: bool,
+) -> bool:
+    """Short commands with the rules; ``False`` lets the AI read long or unresolved ones."""
+    if ai_on and not is_simple_command(text):
+        return False
+    try:
+        await text_commands.handle_command(message, command, finance, user, settings.tz, state)
+    except (MissingTargetError, NoMatchingTransactionError):
+        if not ai_on:
+            raise
+        return False
+    return True
+
+
+async def _run_rules(
+    message: Message,
+    text: str,
+    finance: FinanceService,
+    gym: GymService,
+    user: User,
+    settings: Settings,
+    *,
+    ai_on: bool,
+) -> bool:
+    """A workout or a simple movement with the free rules; ``False`` if neither applies."""
+    today = message.date.astimezone(settings.tz).date()
+    # Workouts: "banco plano 4x12 60" must not become a $60 expense.
+    if (workout := parse_workout(text, today)) is not None:
+        logged = await gym.log(user, workout.items, day=workout.day or today)
+        await gym_handlers.answer_logged(message, logged, today)
+        return True
+
+    # A plain amount is a transaction, unless it reads like a workout or a correction
+    # ("el uber eran 2500"): those are never registered as something new. With the AI on,
+    # only simple entries take this path; longer ones are better understood by the AI.
+    if looks_like_workout(text) or looks_like_correction(text):
+        return False
+    if ai_on and not is_simple_entry(text):
+        return False
+    try:
+        transaction = await finance.register(user, text, now=message.date)
+    except MissingAmountError:
+        return False
+    await finance_entries.answer_registered(message, transaction, settings.tz)
+    return True
 
 
 def _help_for(text: str) -> str:
