@@ -17,6 +17,10 @@ rutina del gimnasio, escribiendo mensajes como `uber 2000` o `gym 47.000`.
 | `nafta 30k ayer` | Gasto de $30.000 con fecha de ayer |
 | `+ 50000 venta bici` | El `+` fuerza ingreso; el `-` fuerza gasto |
 | `/movimientos [mes]` | Lista paginada; tocá un número para editarlo o borrarlo |
+| `/resumen [mes]` | Gastos por categoría (con detalle: uber, sube...), ingresos por cuenta y balance |
+| `/categorias` | Categorías y las palabras que las eligen |
+| `/palabra nafta auto` | Enseña o mueve una palabra clave a otra categoría |
+| `/nueva_categoria 🚙 Auto` | Crea una categoría (`ingreso` adelante para ingresos) |
 
 Cada movimiento registrado llega con botones para cambiar la categoría, el importe, la
 descripción, la fecha, la cuenta o el tipo, y para borrarlo (con confirmación).

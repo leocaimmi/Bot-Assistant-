@@ -6,6 +6,10 @@ from zoneinfo import ZoneInfo
 
 from asistente.core.text import normalize
 
+# Years the bot accepts: keeps typos and forged input away from date arithmetic.
+MIN_YEAR = 2000
+MAX_YEAR = 2100
+
 MONTHS = (
     "enero",
     "febrero",
@@ -135,4 +139,4 @@ def _year(raw: str) -> int | None:
     year = int(raw)
     if len(raw) == 2:
         year += 2000
-    return year if 2000 <= year <= 2100 else None
+    return year if MIN_YEAR <= year <= MAX_YEAR else None
