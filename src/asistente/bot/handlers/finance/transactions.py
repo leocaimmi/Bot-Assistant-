@@ -4,11 +4,10 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from aiogram import Bot, F, Router
-from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandObject, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
+from aiogram.types import CallbackQuery, Message
 
 from asistente.bot.handlers.finance import keyboards, views
 from asistente.bot.handlers.finance.callbacks import (
@@ -19,6 +18,7 @@ from asistente.bot.handlers.finance.callbacks import (
     TxPageCallback,
 )
 from asistente.bot.handlers.finance.states import EditTransaction
+from asistente.bot.ui import edit_or_send
 from asistente.config import Settings
 from asistente.core.dates import parse_day, parse_month
 from asistente.core.money import parse_amount
@@ -63,7 +63,7 @@ async def change_page(
 ) -> None:
     month = (callback_data.year, callback_data.month) if callback_data.year else None
     page = await finance.page(user, callback_data.page, month=month)
-    await _show(
+    await edit_or_send(
         callback,
         bot,
         views.transactions_page(page, settings.tz, month),
@@ -101,7 +101,7 @@ async def show_actions(
     settings: Settings,
 ) -> None:
     transaction = await finance.get(user, callback_data.tx_id)
-    await _show(
+    await edit_or_send(
         callback,
         bot,
         views.transaction_card(transaction, settings.tz),
@@ -119,7 +119,7 @@ async def show_editor(
     settings: Settings,
 ) -> None:
     transaction = await finance.get(user, callback_data.tx_id)
-    await _show(
+    await edit_or_send(
         callback,
         bot,
         views.transaction_card(transaction, settings.tz),
@@ -138,7 +138,7 @@ async def show_category_picker(
 ) -> None:
     transaction = await finance.get(user, callback_data.tx_id)
     categories = await finance.categories(user, transaction.kind)
-    await _show(
+    await edit_or_send(
         callback,
         bot,
         views.transaction_card(transaction, settings.tz),
@@ -158,7 +158,7 @@ async def pick_category(
     transaction = await finance.change_category(
         user, callback_data.tx_id, callback_data.category_id
     )
-    await _show(
+    await edit_or_send(
         callback,
         bot,
         views.transaction_card(transaction, settings.tz, title=UPDATED),
@@ -177,7 +177,7 @@ async def show_account_picker(
 ) -> None:
     transaction = await finance.get(user, callback_data.tx_id)
     accounts = await finance.accounts(user)
-    await _show(
+    await edit_or_send(
         callback,
         bot,
         views.transaction_card(transaction, settings.tz),
@@ -195,7 +195,7 @@ async def pick_account(
     settings: Settings,
 ) -> None:
     transaction = await finance.change_account(user, callback_data.tx_id, callback_data.account_id)
-    await _show(
+    await edit_or_send(
         callback,
         bot,
         views.transaction_card(transaction, settings.tz, title=UPDATED),
@@ -213,7 +213,7 @@ async def toggle_kind(
     settings: Settings,
 ) -> None:
     transaction = await finance.toggle_kind(user, callback_data.tx_id)
-    await _show(
+    await edit_or_send(
         callback,
         bot,
         views.transaction_card(transaction, settings.tz, title=UPDATED),
@@ -231,7 +231,7 @@ async def ask_delete(
     settings: Settings,
 ) -> None:
     transaction = await finance.get(user, callback_data.tx_id)
-    await _show(
+    await edit_or_send(
         callback,
         bot,
         views.transaction_card(transaction, settings.tz, title="¿Borrar este movimiento?"),
@@ -248,7 +248,7 @@ async def confirm_delete(
     user: User,
 ) -> None:
     await finance.delete(user, callback_data.tx_id)
-    await _show(callback, bot, views.deleted(callback_data.tx_id), None)
+    await edit_or_send(callback, bot, views.deleted(callback_data.tx_id), None)
     await callback.answer("Borrado")
 
 
@@ -360,20 +360,6 @@ async def _reply_updated(message: Message, transaction: Transaction, settings: S
         views.transaction_card(transaction, settings.tz, title=UPDATED),
         reply_markup=keyboards.transaction_actions(transaction.id),
     )
-
-
-async def _show(
-    callback: CallbackQuery, bot: Bot, text: str, markup: InlineKeyboardMarkup | None
-) -> None:
-    """Edit the message holding the button; send a new one if it is no longer accessible."""
-    if isinstance(callback.message, Message):
-        try:
-            await callback.message.edit_text(text, reply_markup=markup)
-        except TelegramBadRequest as error:
-            if "message is not modified" not in error.message:
-                raise
-        return
-    await bot.send_message(callback.from_user.id, text, reply_markup=markup)
 
 
 def build_router() -> Router:

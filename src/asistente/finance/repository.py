@@ -14,8 +14,10 @@ from asistente.finance.models import (
     Transaction,
     TransactionKind,
 )
+from asistente.finance.reports import TotalRow
 
-SelectT = TypeVar("SelectT", bound=Select[Any])
+# Any SELECT, whatever its columns (Select is variadic in SQLAlchemy 2.1).
+SelectT = TypeVar("SelectT", bound=Select[*tuple[Any, ...]])
 
 
 class FinanceRepository:
@@ -90,6 +92,27 @@ class FinanceRepository:
     ) -> int:
         query = select(func.count(Transaction.id)).where(Transaction.user_id == user_id)
         return await self._session.scalar(_in_period(query, start, end)) or 0
+
+    async def totals(self, user_id: int, *, start: datetime, end: datetime) -> list[TotalRow]:
+        """Amounts summed per kind, category, account and description in ``[start, end)``."""
+        group = (
+            Transaction.kind,
+            Transaction.category_id,
+            Transaction.account_id,
+            Transaction.description,
+        )
+        query = _in_period(
+            select(*group, func.sum(Transaction.amount_cents), func.count(Transaction.id))
+            .where(Transaction.user_id == user_id)
+            .group_by(*group),
+            start,
+            end,
+        )
+        rows = await self._session.execute(query)
+        return [
+            TotalRow(kind, category_id, account_id, description, int(cents), count)
+            for kind, category_id, account_id, description, cents, count in rows
+        ]
 
     async def flush(self) -> None:
         await self._session.flush()

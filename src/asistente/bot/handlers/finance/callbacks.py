@@ -39,3 +39,8 @@ class TxPageCallback(CallbackData, prefix="txp"):
     # 0 means "no month filter".
     year: int = 0
     month: int = 0
+
+
+class SummaryCallback(CallbackData, prefix="sum"):
+    year: int
+    month: int

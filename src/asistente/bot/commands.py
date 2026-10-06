@@ -4,6 +4,7 @@ from aiogram import Bot
 from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats
 
 BOT_COMMANDS = (
+    BotCommand(command="resumen", description="Resumen del mes"),
     BotCommand(command="movimientos", description="Ver y editar movimientos"),
     BotCommand(command="ayuda", description="Cómo usar el bot"),
     BotCommand(command="cancelar", description="Cancelar la acción en curso"),
