@@ -1,6 +1,6 @@
 from aiogram import Router
 
-from asistente.bot.handlers.finance import categories, reports, transactions
+from asistente.bot.handlers.finance import categories, edits, reports, transactions
 
 
 def build_router() -> Router:
@@ -10,5 +10,6 @@ def build_router() -> Router:
         transactions.build_router(),
         reports.build_router(),
         categories.build_router(),
+        edits.build_router(),
     )
     return router

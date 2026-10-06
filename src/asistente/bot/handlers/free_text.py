@@ -81,7 +81,7 @@ async def route_text(
 
     # Commands first: "borrar uber 2000" must not register a new expense.
     if (command := parse_command(text)) is not None:
-        await text_commands.handle_command(message, command, finance, user, settings.tz)
+        await text_commands.handle_command(message, command, finance, user, settings.tz, state)
         return
 
     # Then workouts: "banco plano 4x12 60" must not become a $60 expense.

@@ -51,14 +51,25 @@ async def test_edit_amount_category_and_day(
     await harness.send("uber 2000")
 
     await harness.send("cambiar uber 2000 a 2500")
+    assert "¿Aplico este cambio?" in harness.last_reply
     assert "Importe: $2.000 → $2.500" in harness.last_reply
+    assert await _amounts(session_factory) == [200_000]  # nothing changes before the OK
+    await harness.click(harness.button("Aplicar"))
+    assert "Movimiento actualizado" in harness.last_reply
     assert await _amounts(session_factory) == [250_000]
 
     await harness.send("cambiar uber a comida")
     assert "Categoría: 🚗 Transporte → 🍔 Comida" in harness.last_reply
+    await harness.click(harness.button("Aplicar"))
+    assert "🍔 Comida" in harness.last_reply
 
     await harness.send("corregir uber a ayer")
     assert "Fecha:" in harness.last_reply
+
+    await harness.send("cambiar uber a efectivo")
+    assert "Cuenta: 📱 Mercado Pago → 💵 Efectivo" in harness.last_reply
+    await harness.click(harness.button("Cancelar"))
+    assert "Cambio descartado" in harness.last_reply
 
 
 async def test_no_match_and_missing_target(harness: BotHarness) -> None:
