@@ -4,9 +4,9 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import CheckConstraint, Enum, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from asistente.core.schedule import Repeat, Schedule, mask_to_weekdays
 from asistente.db.base import Base, TimestampMixin
 from asistente.db.types import UTCDateTime
-from asistente.reminders.schedule import Repeat, Schedule, mask_to_weekdays
 
 MAX_TEXT_LENGTH = 200
 

@@ -21,8 +21,8 @@ from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from asistente.core.dates import MAX_YEAR, MIN_YEAR, MONTHS
+from asistente.core.schedule import WEEKEND, WORKDAYS, Repeat, Schedule, next_occurrence
 from asistente.core.text import fold
-from asistente.reminders.schedule import WEEKEND, WORKDAYS, Repeat, Schedule, next_occurrence
 
 DEFAULT_TIME = time(9, 0)
 # Longer messages are not read by the rules (a reminder is a sentence, not an essay).

@@ -37,10 +37,12 @@ Un bot de Telegram de uso personal (un solo usuario) para:
 | 7. IA para mensajes libres | `feat/ai-interpreter` | Hecho |
 | 8. IA más barata (GPT-6 Luna) | `feat/gpt-6-luna` | Hecho |
 | 9. Audios | `feat/voice-messages` | Hecho |
-| 10. Menú de ayuda por temas | `feat/help-menu` | Hecho, falta merge |
-| 11. Ediciones por voz y transferencias | `fix/voice-edits` | Hecho, falta merge |
-| 12. Recordatorios | `feat/reminders` | Hecho, falta merge |
-| 13. Mejoras | varias | Backlog |
+| 10. Menú de ayuda por temas | `feat/help-menu` | Hecho |
+| 11. Ediciones por voz y transferencias | `fix/voice-edits` | Hecho |
+| 12. Recordatorios | `feat/reminders` | Hecho |
+| 13. Resumen legible y logs en hora local | `fix/summary-details`, `fix/log-timezone` | Hecho, falta merge |
+| 14. Cuotas y gastos fijos | `feat/recurring-payments` | Hecho, falta merge |
+| 15. Mejoras | varias | Backlog |
 
 ### Fase 0: base del repositorio
 
@@ -168,9 +170,29 @@ verifica que todo comando del menú de Telegram esté explicado.
   (notificación push de Telegram) con **✅ Listo** y **⏳ 10 min**. No usa la IA.
 - Las frases que las reglas no entienden las reescribe la IA y el parser las verifica.
 
-### Fase 13: mejoras (backlog)
+### Fase 13: resumen legible y logs en hora local
 
-- Gastos recurrentes (por ejemplo, la cuota del gimnasio todos los meses).
+- `/resumen` muestra cada detalle en su propio renglón (y "y N más" si hay más de 3),
+  así el celular no corta un detalle a la mitad.
+- Los logs usan la zona horaria del bot con su desfase (`2026-10-06 00:32:10.123-03:00`),
+  no la hora UTC del servidor.
+
+### Fase 14: cuotas y gastos fijos
+
+| Mensaje | Resultado |
+| ------- | --------- |
+| `zapatillas 10.000 cuota 1 de 9` | Anota la 1/9 y después la 2/9, 3/9... cada mes |
+| `zapatillas 90.000 en 9 cuotas` | Divide el total en 9 |
+| `seguro del celu 5.000 todos los meses` | Gasto fijo, sin fin |
+| `alquiler 300.000 el 10 de cada mes` | Gasto fijo con día |
+| `/fijos` | Lista con botones para dar de baja |
+
+- Cada cargo es un movimiento normal, creado el día que corresponde, así aparece en
+  `/resumen` y `/movimientos` del mes que toca.
+- El mismo loop de los recordatorios los anota y avisa sin sonido. No usa la IA.
+
+### Fase 15: mejoras (backlog)
+
 - Presupuestos por categoría con aviso al acercarse al límite.
 - `/exportar` a CSV y `/backup`, que envía la base por Telegram.
 - Registro de peso corporal.
@@ -211,6 +233,7 @@ Fechas aceptadas: `hoy`, `ayer`, `anteayer`, `15/09`, `15/09/2026`.
 | "transferencia" | Se toma como ingreso | Según el ejemplo `transferencia utn 200.000`; con `-` adelante se fuerza gasto |
 | Gimnasio | `4x12` = 4 series de 12 | Así lo escribís vos: primero las series |
 | IA | Híbrida, `gpt-6-luna`, opcional | Lo simple con reglas (gratis e instantáneo); la IA solo para lo que las reglas no entienden, con salida validada y confirmación para editar o borrar. Luna es el modelo más barato con Structured Outputs |
+| Cuotas y fijos | Un plan por pago y un movimiento real cada mes, creado al vencer | El resumen de cada mes muestra lo que se pagó ese mes, y dar de baja no borra lo ya anotado |
 | Recordatorios | Un loop dentro del mismo proceso, cada 20 s, sobre SQLite | Sin servicios extra ni costo; cada envío es su propia transacción y nada se reintenta para siempre |
 | Zona horaria | Argentina salvo que se diga otra | Lo pidió el usuario; los periódicos siguen la hora de esa zona aunque cambie el horario de verano |
 | Audios | Transcribir con `gpt-4o-mini-transcribe` y seguir con las reglas | Es el modelo de transcripción más barato; Luna no acepta audio, y si las reglas entienden lo dictado no hace falta una segunda consulta |
@@ -220,7 +243,7 @@ Fechas aceptadas: `hoy`, `ayer`, `anteayer`, `15/09`, `15/09/2026`.
 - Una rama por feature, nunca commits directos a `main`.
 - Conventional Commits en inglés (`feat:`, `fix:`, `chore:`, `docs:`, `test:`, `ci:`, `build:`).
 - Las ramas están apiladas porque cada una depende de la anterior. Ya están en `main`
-  todas hasta `feat/voice-messages`; faltan, en orden: `feat/help-menu` ←
-  `fix/voice-edits` ← `feat/reminders`.
+  todas hasta `fix/docker-database-url`; faltan, en orden: `fix/summary-details` ←
+  `fix/log-timezone` ← `feat/recurring-payments`.
 - Se mergean con **Create a merge commit**: no reescribe los commits, así cada PR
   siguiente muestra solo lo suyo.

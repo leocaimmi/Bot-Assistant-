@@ -6,6 +6,7 @@ from enum import StrEnum
 class HelpTopic(StrEnum):
     MENU = "menu"
     FINANCE = "finance"
+    RECURRING = "recurring"
     GYM = "gym"
     EDIT = "edit"
     REMINDERS = "reminders"
@@ -15,6 +16,7 @@ class HelpTopic(StrEnum):
 # Button of each topic, in menu order.
 TOPIC_BUTTONS = {
     HelpTopic.FINANCE: "💸 Gastos e ingresos",
+    HelpTopic.RECURRING: "🔁 Cuotas y fijos",
     HelpTopic.GYM: "🏋️ Gimnasio",
     HelpTopic.EDIT: "✏️ Corregir y borrar",
     HelpTopic.REMINDERS: "⏰ Recordatorios",
@@ -52,6 +54,16 @@ _FINANCE = """\
 <code>/nueva_categoria 🚙 Auto</code> · crear una
 
 💡 Importes: <code>2.000</code> · <code>2k</code> · <code>200 mil</code> · <code>2 lucas</code>"""
+
+_RECURRING = """\
+🔁 <b>Cuotas y gastos fijos</b>
+Se anotan solos cada mes y te aviso en el chat:
+<code>zapatillas 10.000 cuota 1 de 9</code> · anoto la 1/9, después la 2/9...
+<code>zapatillas 90.000 en 9 cuotas</code> · divide el total
+<code>seguro del celu 5.000 todos los meses</code> · gasto fijo
+<code>alquiler 300.000 el 10 de cada mes</code> · con día fijo
+
+/fijos · ver y dar de baja (lo ya anotado queda)"""
 
 _GYM = """\
 🏋️ <b>Gimnasio</b>
@@ -108,6 +120,7 @@ _AI_OFF = "⚠️ Ahora está apagada: falta configurar <code>OPENAI_API_KEY</co
 
 _TOPICS = {
     HelpTopic.FINANCE: _FINANCE,
+    HelpTopic.RECURRING: _RECURRING,
     HelpTopic.GYM: _GYM,
     HelpTopic.EDIT: _EDIT,
     HelpTopic.REMINDERS: _REMINDERS,

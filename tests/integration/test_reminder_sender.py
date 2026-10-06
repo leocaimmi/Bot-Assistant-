@@ -1,5 +1,3 @@
-import asyncio
-from contextlib import suppress
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -13,7 +11,7 @@ from aiogram.methods import SendMessage
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from asistente.bot.handlers.reminders import views
-from asistente.bot.reminder_sender import run_reminders, send_due_reminders
+from asistente.bot.reminder_sender import send_due_reminders
 from asistente.reminders.parser import parse_reminder
 from asistente.reminders.service import ReminderService
 from asistente.users.service import UserService
@@ -93,24 +91,6 @@ async def test_a_blocked_bot_does_not_retry_forever(
     assert await _send(harness, session_factory, due) == 0
     monkeypatch.undo()
     assert await _send(harness, session_factory, due) == 0  # it was not left pending
-
-
-async def test_the_loop_survives_errors(
-    harness: BotHarness, caplog: pytest.LogCaptureFixture
-) -> None:
-    def broken_factory() -> AsyncSession:
-        raise RuntimeError("database down")
-
-    task = asyncio.create_task(
-        run_reminders(harness.bot, broken_factory, BUENOS_AIRES, every=0)  # type: ignore[arg-type]
-    )
-    await asyncio.sleep(0.05)
-    task.cancel()
-    with suppress(asyncio.CancelledError):
-        await task
-
-    assert "Could not send the due reminders" in caplog.text
-    assert task.cancelled()
 
 
 def _failing(error: Exception) -> object:

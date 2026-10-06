@@ -8,8 +8,8 @@ from datetime import date, datetime, time, timedelta
 from html import escape
 from zoneinfo import ZoneInfo
 
+from asistente.core.schedule import WEEKEND, WORKDAYS, Repeat, Schedule
 from asistente.reminders.models import Reminder
-from asistente.reminders.schedule import WEEKEND, WORKDAYS, Repeat, Schedule
 
 WEEKDAYS_SHORT = ("lun", "mar", "mié", "jue", "vie", "sáb", "dom")
 _WEEKDAYS_PLURAL = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábados", "domingos")

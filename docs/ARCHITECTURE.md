@@ -46,10 +46,14 @@ src/asistente/
 │   ├── repository.py      # Acceso a datos (consultas)
 │   ├── service.py         # Reglas de negocio de los movimientos
 │   ├── categories.py      # Categorías y palabras clave
-│   └── reports.py         # Resumen mensual
+│   ├── reports.py         # Resumen mensual
+│   ├── recurring.py       # "cuota 1 de 9", "todos los meses" → RecurringRequest
+│   └── recurring_service.py # Planes de cuotas y fijos, y su cobro mensual
 └── bot/                   # Adaptador de Telegram
     ├── app.py             # Arma Bot + Dispatcher y arranca el polling
-    ├── reminder_sender.py # Loop que manda los recordatorios vencidos
+    ├── scheduler.py       # Loop cada 20 s: recordatorios y pagos automáticos
+    ├── reminder_sender.py # Manda los recordatorios vencidos
+    ├── recurring_charger.py # Anota las cuotas y gastos fijos vencidos
     ├── commands.py        # Menú de comandos
     ├── errors.py          # Respuesta ante errores (sin detalles internos)
     ├── help.py            # Texto de /ayuda, una sección por módulo
@@ -58,6 +62,7 @@ src/asistente/
     └── handlers/          # Un paquete por dominio (common, finance, gym, ...)
         ├── free_text.py   # Ruteo del texto: recordatorio, comando, gimnasio, gasto o IA
         ├── reminders/     # Tarjetas, /recordatorios y botones Listo / 10 min
+        ├── recurring/     # Cuotas y fijos: aviso al crearlos y /fijos
         ├── voice.py       # Audios: los transcribe y siguen el camino del texto
         └── assistant.py   # Ejecuta lo que interpreta la IA (validado y confirmado)
 migrations/                # Alembic
@@ -128,6 +133,7 @@ erDiagram
     categories ||--o{ category_keywords : "se detecta por"
     accounts ||--o{ transactions : mueve
     categories ||--o{ transactions : clasifica
+    users ||--o{ recurring_payments : programa
 
     users {
         int id PK
@@ -154,6 +160,17 @@ erDiagram
         int user_id FK
         int category_id FK
         string keyword UK
+    }
+    recurring_payments {
+        int id PK
+        int user_id FK
+        string description
+        bigint amount_cents "mayor a 0"
+        int day_of_month "1-31"
+        int installments "NULL si es fijo"
+        int next_number "la 2 de 2/9"
+        datetime next_run_at "UTC, con índice"
+        bool active
     }
     transactions {
         int id PK
@@ -224,10 +241,19 @@ erDiagram
     }
 ```
 
-## Recordatorios
+## Tareas en segundo plano
 
-Un loop corre junto al long polling y cada 20 segundos busca los recordatorios vencidos
-(índice por `active, next_run_at`), como mucho 50 por vuelta:
+Un solo loop corre junto al long polling y cada 20 segundos hace dos tareas, cada una
+aislada (si una falla, la otra sigue) y sin usar la IA.
+
+**Cuotas y gastos fijos** (`recurring_payments`): cada plan guarda el próximo día de
+cobro. Al vencer se crea el movimiento (`zapatillas (2/9)`) y el plan pasa al mes
+siguiente en la misma transacción, así nunca se cobra dos veces; el aviso (sin sonido) se
+manda después. Si el bot estuvo apagado se recuperan hasta 12 meses por vuelta, con sus
+fechas originales; un plan que falla de forma inesperada se desactiva.
+
+**Recordatorios**: busca los vencidos (índice por `active, next_run_at`), como mucho 50
+por vuelta:
 
 - Cada uno se manda en su propia transacción y se marca como enviado recién cuando
   Telegram lo acepta: un corte nunca pierde uno (como mucho, llega dos veces).
@@ -257,6 +283,7 @@ Un loop corre junto al long polling y cada 20 segundos busca los recordatorios v
 | Audios | Solo notas de voz de hasta 1 minuto y 1 MB, rechazadas antes de descargarlas; lo transcripto pasa por las mismas reglas y validaciones que un mensaje escrito |
 | Privacidad con OpenAI | `store=false`, identificador de usuario hasheado, solo se envía el mensaje (o el audio) con categorías y nombres de ejercicios; el audio se procesa en memoria y no se guarda |
 | Inyección de prompt | El mensaje va delimitado y sin `<` `>`; la IA no tiene herramientas ni puede ejecutar acciones |
+| Cuotas y fijos | Solo con reglas (sin IA); hasta 30 activos y 120 cuotas; restricciones en la base (importe > 0, día 1-31); el cobro y el avance del plan son atómicos; dar de baja valida que el plan sea del usuario |
 | Recordatorios | Cada uno se manda solo a su dueño; hasta 30 activos (también al posponer) y 200 caracteres; el texto se escapa; ningún envío se reintenta para siempre y mandarlos no usa la IA |
 | Ediciones por texto o voz | Siempre muestran el antes → después y esperan **Aplicar**; el cambio pendiente queda en el servidor y el botón solo lleva un token al azar |
 
