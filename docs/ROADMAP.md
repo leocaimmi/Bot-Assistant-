@@ -166,7 +166,7 @@ verifica que todo comando del menú de Telegram esté explicado.
 | `/recordatorios` | Lista con botones para borrar |
 
 - Formato y hora argentinos; otra zona solo si se dice.
-- Un loop dentro del bot revisa cada 20 s y manda los que vencieron como mensaje
+- Un loop dentro del bot revisa una vez por minuto y manda los que vencieron como mensaje
   (notificación push de Telegram) con **✅ Listo** y **⏳ 10 min**. No usa la IA.
 - Las frases que las reglas no entienden las reescribe la IA y el parser las verifica.
 
@@ -234,7 +234,7 @@ Fechas aceptadas: `hoy`, `ayer`, `anteayer`, `15/09`, `15/09/2026`.
 | Gimnasio | `4x12` = 4 series de 12 | Así lo escribís vos: primero las series |
 | IA | Híbrida, `gpt-6-luna`, opcional | Lo simple con reglas (gratis e instantáneo); la IA solo para lo que las reglas no entienden, con salida validada y confirmación para editar o borrar. Luna es el modelo más barato con Structured Outputs |
 | Cuotas y fijos | Un plan por pago y un movimiento real cada mes, creado al vencer | El resumen de cada mes muestra lo que se pagó ese mes, y dar de baja no borra lo ya anotado |
-| Recordatorios | Un loop dentro del mismo proceso, cada 20 s, sobre SQLite | Sin servicios extra ni costo; cada envío es su propia transacción y nada se reintenta para siempre |
+| Recordatorios | Un loop dentro del mismo proceso, una vez por minuto (alineado al reloj), sobre SQLite | Sin servicios extra ni costo; cada envío es su propia transacción y nada se reintenta para siempre |
 | Zona horaria | Argentina salvo que se diga otra | Lo pidió el usuario; los periódicos siguen la hora de esa zona aunque cambie el horario de verano |
 | Audios | Transcribir con `gpt-4o-mini-transcribe` y seguir con las reglas | Es el modelo de transcripción más barato; Luna no acepta audio, y si las reglas entienden lo dictado no hace falta una segunda consulta |
 

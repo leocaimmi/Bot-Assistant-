@@ -51,7 +51,7 @@ src/asistente/
 │   └── recurring_service.py # Planes de cuotas y fijos, y su cobro mensual
 └── bot/                   # Adaptador de Telegram
     ├── app.py             # Arma Bot + Dispatcher y arranca el polling
-    ├── scheduler.py       # Loop cada 20 s: recordatorios y pagos automáticos
+    ├── scheduler.py       # Loop por minuto: recordatorios y pagos automáticos
     ├── reminder_sender.py # Manda los recordatorios vencidos
     ├── recurring_charger.py # Anota las cuotas y gastos fijos vencidos
     ├── commands.py        # Menú de comandos
@@ -243,8 +243,10 @@ erDiagram
 
 ## Tareas en segundo plano
 
-Un solo loop corre junto al long polling y cada 20 segundos hace dos tareas, cada una
-aislada (si una falla, la otra sigue) y sin usar la IA.
+Un solo loop corre junto al long polling una vez por minuto, alineado al reloj
+(12:00:01, 12:01:01...): como los horarios son minutos redondos, uno de las 12:00 sale a
+las 12:00:01. Hace dos tareas, cada una aislada (si una falla, la otra sigue) y sin usar
+la IA; en reposo son 2 lecturas por índice y ninguna escritura.
 
 **Cuotas y gastos fijos** (`recurring_payments`): cada plan guarda el próximo día de
 cobro. Al vencer se crea el movimiento (`zapatillas (2/9)`) y el plan pasa al mes
