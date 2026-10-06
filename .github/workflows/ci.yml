@@ -68,6 +68,14 @@ jobs:
           fi
           grep "Invalid configuration" run.log
 
+      - name: Refuses a relative database path
+        run: |
+          if docker run --rm -e DATABASE_URL=sqlite+aiosqlite:///./data/asistente.db \
+              asistente:ci > relative.log 2>&1; then
+            echo "The bot started with a relative DATABASE_URL" && exit 1
+          fi
+          grep "relative SQLite path" relative.log
+
   secrets:
     name: Secret scan
     runs-on: ubuntu-latest
