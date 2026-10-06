@@ -4,10 +4,15 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import pytest
-from aiogram.exceptions import TelegramForbiddenError
+from aiogram.exceptions import (
+    TelegramBadRequest,
+    TelegramForbiddenError,
+    TelegramNetworkError,
+)
 from aiogram.methods import SendMessage
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from asistente.bot.handlers.reminders import views
 from asistente.bot.reminder_sender import run_reminders, send_due_reminders
 from asistente.reminders.parser import parse_reminder
 from asistente.reminders.service import ReminderService
@@ -106,3 +111,64 @@ async def test_the_loop_survives_errors(
 
     assert "Could not send the due reminders" in caplog.text
     assert task.cancelled()
+
+
+def _failing(error: Exception) -> object:
+    async def send(*_args: object, **_kwargs: object) -> None:
+        raise error
+
+    return send
+
+
+def _telegram(kind: type[Exception]) -> Exception:
+    return kind(method=SendMessage(chat_id=ALLOWED_USER_ID, text="x"), message="error")  # type: ignore[call-arg]
+
+
+async def test_a_network_failure_keeps_the_reminder_for_the_next_round(
+    harness: BotHarness,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _create(session_factory, "recordame en 20 minutos sacar la ropa")
+    due = NOW + timedelta(minutes=20)
+    monkeypatch.setattr(harness.bot, "send_message", _failing(_telegram(TelegramNetworkError)))
+
+    assert await _send(harness, session_factory, due) == 0
+    monkeypatch.undo()
+    assert await _send(harness, session_factory, due) == 1
+
+
+async def test_a_refused_message_is_not_retried(
+    harness: BotHarness,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _create(session_factory, "recordame en 20 minutos sacar la ropa")
+    due = NOW + timedelta(minutes=20)
+    monkeypatch.setattr(harness.bot, "send_message", _failing(_telegram(TelegramBadRequest)))
+
+    assert await _send(harness, session_factory, due) == 0
+    monkeypatch.undo()
+    assert await _send(harness, session_factory, due) == 0
+
+
+async def test_a_broken_reminder_never_blocks_the_others(
+    harness: BotHarness,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _create(session_factory, "recordame en 20 minutos romper todo")
+    await _create(session_factory, "recordame en 30 minutos sacar la ropa")
+    real_fired = views.fired
+
+    def fired(reminder: object, *args: object, **kwargs: object) -> str:
+        if "romper" in getattr(reminder, "text", ""):
+            raise ValueError("unexpected")
+        return real_fired(reminder, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(views, "fired", fired)
+    due = NOW + timedelta(minutes=30)
+
+    assert await _send(harness, session_factory, due) == 1
+    assert harness.last_reply == "⏰ <b>Sacar la ropa</b>"
+    assert await _send(harness, session_factory, due) == 0  # the broken one was turned off

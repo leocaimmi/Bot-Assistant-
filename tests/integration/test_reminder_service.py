@@ -129,6 +129,15 @@ async def test_snooze_makes_a_one_off_copy(reminders: ReminderService, user: Use
     assert original.active
 
 
+async def test_snoozing_respects_the_limit(reminders: ReminderService, user: User) -> None:
+    first = await reminders.create(user, _parsed("recordame mañana algo"), now=NOW)
+    for _ in range(MAX_ACTIVE_REMINDERS - 1):
+        await reminders.snooze(user, first.id, now=NOW)
+
+    with pytest.raises(TooManyRemindersError):
+        await reminders.snooze(user, first.id, now=NOW)
+
+
 async def test_other_users_reminders_are_out_of_reach(
     session: AsyncSession, reminders: ReminderService, user: User
 ) -> None:

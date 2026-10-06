@@ -175,6 +175,10 @@ def test_parse_when_only_accepts_a_timing() -> None:
     assert parse_when("mañana a las 9 pagar la luz", NOW, BUENOS_AIRES) is None
 
 
+def test_huge_messages_are_not_read() -> None:
+    assert parse_reminder("recordame mañana " + "x " * 600, NOW, BUENOS_AIRES) is None
+
+
 def test_is_reminder_request() -> None:
     assert is_reminder_request("Recordame mañana a las 9")
     assert is_reminder_request("che, avisame el lunes")

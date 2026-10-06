@@ -107,6 +107,8 @@ class ReminderService:
     async def snooze(self, user: User, reminder_id: int, *, now: datetime) -> Reminder:
         """A one-off copy of the reminder, due in a few minutes (the original is kept)."""
         original = await self.get(user, reminder_id)
+        if await self._count_active(user) >= MAX_ACTIVE_REMINDERS:
+            raise TooManyRemindersError
         run = (now + timedelta(minutes=SNOOZE_MINUTES)).astimezone(original.zone)
         copy = Reminder(
             user_id=user.id,
@@ -163,6 +165,13 @@ class ReminderService:
             else:
                 reminder.next_run_at = next_run
         await self._session.flush()
+
+    async def turn_off(self, reminder_id: int) -> None:
+        """Stop a reminder that cannot be sent (used by the sender, not by users)."""
+        reminder = await self._session.get(Reminder, reminder_id)
+        if reminder is not None:
+            reminder.active = False
+            await self._session.flush()
 
     async def _count_active(self, user: User) -> int:
         query = (

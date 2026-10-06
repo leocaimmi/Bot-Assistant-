@@ -25,6 +25,8 @@ from asistente.core.text import fold
 from asistente.reminders.schedule import WEEKEND, WORKDAYS, Repeat, Schedule, next_occurrence
 
 DEFAULT_TIME = time(9, 0)
+# Longer messages are not read by the rules (a reminder is a sentence, not an essay).
+MAX_MESSAGE_LENGTH = 1000
 
 # Places named for another time zone ("hora de España", "hora española"), folded.
 TIME_ZONES: dict[str, str] = {
@@ -190,6 +192,8 @@ def parse_reminder(text: str, now: datetime, tz: ZoneInfo) -> ParsedReminder | N
 
     ``now`` is aware and ``tz`` is the user's own time zone.
     """
+    if len(text) > MAX_MESSAGE_LENGTH:
+        return None
     message = _Message(text)
     if not message.take(_VERB):
         return None
@@ -207,6 +211,8 @@ def parse_reminder(text: str, now: datetime, tz: ZoneInfo) -> ParsedReminder | N
 
 def parse_when(text: str, now: datetime, tz: ZoneInfo) -> When | None:
     """Only a timing ("todos los lunes a las 12"), as the AI rewrites it; else ``None``."""
+    if len(text) > MAX_MESSAGE_LENGTH:
+        return None
     message = _Message(text)
     try:
         when = _read_when(message, now, tz)
