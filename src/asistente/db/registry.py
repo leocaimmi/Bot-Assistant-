@@ -2,6 +2,17 @@
 
 from asistente.db.base import Base
 from asistente.finance.models import Account, Category, CategoryKeyword, Transaction
+from asistente.gym.models import Exercise, Workout, WorkoutEntry
 from asistente.users.models import User
 
-__all__ = ["Account", "Base", "Category", "CategoryKeyword", "Transaction", "User"]
+__all__ = [
+    "Account",
+    "Base",
+    "Category",
+    "CategoryKeyword",
+    "Exercise",
+    "Transaction",
+    "User",
+    "Workout",
+    "WorkoutEntry",
+]
