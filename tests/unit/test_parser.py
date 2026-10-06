@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 
 from asistente.finance.models import TransactionKind
-from asistente.finance.parser import MissingAmountError, parse_entry
+from asistente.finance.parser import MissingAmountError, is_simple_entry, parse_entry
 
 TODAY = date(2026, 10, 5)
 
@@ -60,3 +60,20 @@ def test_drops_symbol_only_words() -> None:
 def test_requires_an_amount(text: str) -> None:
     with pytest.raises(MissingAmountError):
         parse_entry(text, today=TODAY)
+
+
+@pytest.mark.parametrize(
+    ("text", "simple"),
+    [
+        ("uber 2000", True),
+        ("transferencia utn 200.000", True),
+        ("super 15.430,50 efectivo", True),
+        ("+ 50000 venta bici", True),
+        ("pago 200 mil", True),
+        ("3 cafés 6000", False),
+        ("gasté dos lucas en el super", False),
+        ("hoy hice press plano 4 de 12 con 60 y fondos 3 de 10", False),
+    ],
+)
+def test_is_simple_entry(text: str, simple: bool) -> None:
+    assert is_simple_entry(text) is simple

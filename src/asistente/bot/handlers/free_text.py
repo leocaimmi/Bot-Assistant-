@@ -1,21 +1,25 @@
-"""Plain-text messages: a command, a workout or a money movement.
+"""Plain-text messages: a command, a workout, a money movement, or (last) the AI.
 
-Rules only, no external calls, in this order: a leading verb is a command ("borrar uber
-2000"); sets x reps is a workout ("pecho: banco plano 4x12"); anything with an amount is a
-transaction ("uber 2000").
+Free rules first, in this order: a leading verb is a command ("borrar uber 2000"); sets x
+reps is a workout ("pecho: banco plano 4x12"); anything with an amount is a transaction
+("uber 2000"). Only what the rules cannot handle goes to the AI, when it is configured.
 """
 
 from aiogram import F, Router
 from aiogram.filters import StateFilter
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
+from asistente.ai.interpreter import Interpreter
+from asistente.ai.usage import AiUsageService, DailyBudget
+from asistente.bot.handlers import assistant
 from asistente.bot.handlers import gym as gym_handlers
 from asistente.bot.handlers.finance import entries as finance_entries
 from asistente.bot.handlers.finance import text_commands
 from asistente.bot.handlers.gym import views as gym_views
 from asistente.config import Settings
-from asistente.finance.commands import parse_command
-from asistente.finance.parser import MissingAmountError
+from asistente.finance.commands import looks_like_correction, parse_command
+from asistente.finance.parser import MissingAmountError, is_simple_entry
 from asistente.finance.service import FinanceService
 from asistente.gym.parser import looks_like_workout, parse_workout
 from asistente.gym.service import GymService
@@ -28,10 +32,22 @@ NOT_UNDERSTOOD = (
     f"• Entrenamiento: {gym_views.FORMAT_EXAMPLES}\n"
     "Mirá /ayuda para más."
 )
+CORRECTION_HELP = (
+    "✏️ Para corregir un movimiento escribí, por ejemplo, "
+    "<code>cambiar uber 2000 a 2500</code> o <code>borrar uber 2000</code>."
+)
 
 
 async def handle_free_text(
-    message: Message, finance: FinanceService, gym: GymService, user: User, settings: Settings
+    message: Message,
+    finance: FinanceService,
+    gym: GymService,
+    ai_usage: AiUsageService,
+    user: User,
+    settings: Settings,
+    state: FSMContext,
+    ai_budget: DailyBudget,
+    interpreter: Interpreter | None = None,
 ) -> None:
     text = message.text or ""
     today = message.date.astimezone(settings.tz).date()
@@ -46,16 +62,42 @@ async def handle_free_text(
         logged = await gym.log(user, workout.items, day=workout.day or today)
         await gym_handlers.answer_logged(message, logged, today)
         return
-    if looks_like_workout(text):
-        await message.answer(gym_views.WORKOUT_FORMAT_HELP)
-        return
 
-    try:
-        transaction = await finance.register(user, text, now=message.date)
-    except MissingAmountError:
-        await message.answer(NOT_UNDERSTOOD)
+    # A plain amount is a transaction, unless it reads like a workout or a correction
+    # ("el uber eran 2500"): those are never registered as something new. With the AI on,
+    # only simple entries take this path; longer ones are better understood by the AI.
+    unclear = looks_like_workout(text) or looks_like_correction(text)
+    if not unclear and (interpreter is None or is_simple_entry(text)):
+        try:
+            transaction = await finance.register(user, text, now=message.date)
+        except MissingAmountError:
+            pass
+        else:
+            await finance_entries.answer_registered(message, transaction, settings.tz)
+            return
+
+    if interpreter is not None and await assistant.interpret(
+        message,
+        text,
+        interpreter=interpreter,
+        budget=ai_budget,
+        finance=finance,
+        gym=gym,
+        ai_usage=ai_usage,
+        user=user,
+        settings=settings,
+        state=state,
+    ):
         return
-    await finance_entries.answer_registered(message, transaction, settings.tz)
+    await message.answer(_help_for(text))
+
+
+def _help_for(text: str) -> str:
+    if looks_like_workout(text):
+        return gym_views.WORKOUT_FORMAT_HELP
+    if looks_like_correction(text):
+        return CORRECTION_HELP
+    return NOT_UNDERSTOOD
 
 
 def build_router() -> Router:

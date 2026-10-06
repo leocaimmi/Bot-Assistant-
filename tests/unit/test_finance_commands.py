@@ -6,6 +6,7 @@ from asistente.finance.commands import (
     CommandKind,
     TargetQuery,
     TextCommand,
+    looks_like_correction,
     parse_command,
     parse_target,
     split_new_value,
@@ -58,3 +59,18 @@ def test_parse_target(text: str, expected: TargetQuery) -> None:
 def test_empty_target() -> None:
     assert parse_target("el de", TODAY).is_empty
     assert not parse_target("el último", TODAY).is_empty
+
+
+@pytest.mark.parametrize(
+    ("text", "correction"),
+    [
+        ("el uber eran 2500", True),
+        ("el gym era 50 lucas", True),
+        ("en vez de 2000 fueron 2500", True),
+        ("me equivoqué con el super", True),
+        ("uber 2000", False),
+        ("cena con amigos 15000", False),
+    ],
+)
+def test_looks_like_correction(text: str, correction: bool) -> None:
+    assert looks_like_correction(text) is correction

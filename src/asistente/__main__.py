@@ -18,7 +18,7 @@ def main() -> None:
         # Input values are hidden in these errors, so no secret is printed.
         sys.exit(f"Invalid configuration, check your environment variables:\n{exc}")
 
-    setup_logging(settings.log_level, secrets=[settings.bot_token.get_secret_value()])
+    setup_logging(settings.log_level, secrets=settings.secret_values())
     with suppress(KeyboardInterrupt):
         asyncio.run(run_polling(settings))
 

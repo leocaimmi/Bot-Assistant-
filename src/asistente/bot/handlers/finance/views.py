@@ -8,7 +8,14 @@ from asistente.core.money import format_ars
 from asistente.finance.categories import KeywordAssignment
 from asistente.finance.models import Category, Transaction, TransactionKind
 from asistente.finance.reports import Group, MonthlySummary
-from asistente.finance.service import TransactionPage
+from asistente.finance.service import (
+    AmountChange,
+    CategoryChange,
+    Change,
+    DayChange,
+    DescriptionChange,
+    TransactionPage,
+)
 
 KIND_LABELS = {TransactionKind.EXPENSE: "Gasto", TransactionKind.INCOME: "Ingreso"}
 KIND_EMOJIS = {TransactionKind.EXPENSE: "💸", TransactionKind.INCOME: "💰"}
@@ -61,6 +68,40 @@ def transactions_page(page: TransactionPage, tz: ZoneInfo, month: tuple[int, int
         "Tocá un número para verlo o editarlo.",
     ]
     return "\n".join(lines)
+
+
+def change_field(transaction: Transaction, change: Change, tz: ZoneInfo) -> tuple[str, str]:
+    """Label and current value (HTML-escaped) of the field that ``change`` touches."""
+    match change:
+        case AmountChange():
+            return "Importe", format_ars(transaction.amount_cents)
+        case CategoryChange():
+            return "Categoría", escape(transaction.category.label)
+        case DayChange():
+            return "Fecha", f"{transaction.occurred_at.astimezone(tz):%d/%m/%Y}"
+        case DescriptionChange():
+            return "Descripción", escape(transaction.description or "-")
+
+
+def change_preview(transaction: Transaction, changes: list[Change], tz: ZoneInfo) -> str:
+    """``"Importe: $2.000 → $2.500"`` lines for changes not applied yet."""
+    lines = []
+    for change in changes:
+        label, before = change_field(transaction, change, tz)
+        lines.append(f"{label}: {before} → {_new_value(change, tz)}")
+    return "\n".join(lines)
+
+
+def _new_value(change: Change, tz: ZoneInfo) -> str:
+    match change:
+        case AmountChange(cents):
+            return format_ars(cents)
+        case CategoryChange(category):
+            return escape(category.label)
+        case DayChange(day):
+            return f"{day:%d/%m/%Y}"
+        case DescriptionChange(description):
+            return escape(description)
 
 
 def deleted(transaction_id: int) -> str:

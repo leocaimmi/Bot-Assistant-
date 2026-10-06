@@ -29,6 +29,19 @@ class ParsedEntry:
     day: date | None
 
 
+MAX_SIMPLE_ENTRY_TOKENS = 7
+
+
+def is_simple_entry(text: str) -> bool:
+    """One amount and a few words, like ``uber 2000`` or ``super 15.430,50 efectivo``.
+
+    Longer messages or several numbers ("press 4 de 12 con 60") are ambiguous: when the AI
+    is available they go to it instead of becoming an expense by accident.
+    """
+    tokens = text.split()
+    return len(tokens) <= MAX_SIMPLE_ENTRY_TOKENS and len(find_amounts(tokens)) == 1
+
+
 def parse_entry(text: str, *, today: date) -> ParsedEntry:
     """Extract amount, optional sign and date. Raises ``MissingAmountError``.
 
