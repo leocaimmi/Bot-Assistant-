@@ -208,6 +208,13 @@ class RecurringPaymentService:
         await self._session.flush()
         return Charged(payment, created, chat_id)
 
+    async def turn_off(self, payment_id: int) -> None:
+        """Stop a payment that cannot be charged (used by the scheduler, not by users)."""
+        payment = await self._session.get(RecurringPayment, payment_id)
+        if payment is not None:
+            payment.active = False
+            await self._session.flush()
+
     async def _count_active(self, user: User) -> int:
         query = (
             select(func.count())
