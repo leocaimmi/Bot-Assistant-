@@ -37,7 +37,8 @@ class Settings(DatabaseSettings):
 
     # Optional AI interpreter (OpenAI). Without a key the bot works with rules only.
     openai_api_key: SecretStr | None = None
-    openai_model: str = Field(default="gpt-5.4-nano", min_length=1)
+    # The cheapest model with Structured Outputs (prices in ai/pricing.py).
+    openai_model: str = Field(default="gpt-6-luna", min_length=1)
     # Maximum AI interpretations per user and day (0 disables the AI).
     ai_daily_limit: int = Field(default=100, ge=0, le=10_000)
 

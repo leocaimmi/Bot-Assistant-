@@ -51,7 +51,7 @@ Cada entrenamiento anotado trae un botón **Deshacer**.
 
 ### IA (opcional)
 
-Con `OPENAI_API_KEY` configurada, lo que las reglas no entienden lo interpreta `gpt-5.4-nano`
+Con `OPENAI_API_KEY` configurada, lo que las reglas no entienden lo interpreta `gpt-6-luna`
 con **una sola consulta** por mensaje:
 
 | Mensaje | Resultado |
@@ -71,8 +71,9 @@ Seguridad y costo:
 - Borrar siempre pide confirmación; editar muestra el antes y después y espera tu OK.
 - `store=false`: OpenAI no guarda los pedidos. Solo se envían el mensaje, tus categorías y
   los nombres de tus ejercicios.
-- Tope diario (`AI_DAILY_LIMIT`), timeout y salida limitada. Costo aproximado: US$0,25 cada
-  1.000 consultas.
+- Tope diario (`AI_DAILY_LIMIT`), timeout y salida limitada. Costo aproximado: entre US$0,06
+  y US$0,20 cada 1.000 consultas, según cuánto aproveche el caché de OpenAI. `/ia` muestra el
+  costo real del mes.
 - Recomendado: crear la key en un proyecto propio de OpenAI con límite de gasto mensual.
 
 ## Requisitos
@@ -99,7 +100,7 @@ Copiá `.env.example` a `.env` y completalo. `.env` está en `.gitignore`: nunca
 | `TIMEZONE` | No | Por defecto `America/Argentina/Buenos_Aires` |
 | `LOG_LEVEL` | No | `DEBUG`, `INFO` (por defecto), `WARNING` o `ERROR` |
 | `OPENAI_API_KEY` | No | Activa la IA para mensajes libres. Sin key, solo reglas |
-| `OPENAI_MODEL` | No | Por defecto `gpt-5.4-nano` |
+| `OPENAI_MODEL` | No | Por defecto `gpt-6-luna`, el más barato |
 | `AI_DAILY_LIMIT` | No | Consultas a la IA por día (por defecto 100; `0` la desactiva) |
 
 Si el bot no te responde, revisá los logs: cada mensaje de un usuario no autorizado se

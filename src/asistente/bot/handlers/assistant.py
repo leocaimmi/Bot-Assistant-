@@ -18,7 +18,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from pydantic import Field
 
-from asistente.ai import validation
+from asistente.ai import pricing, validation
 from asistente.ai.interpreter import (
     MAX_MESSAGE_LENGTH,
     Interpreter,
@@ -89,9 +89,7 @@ async def interpret(
     except InterpreterError:
         await message.answer(AI_UNAVAILABLE)
         return True
-    await ai_usage.record(
-        user, today, input_tokens=result.input_tokens, output_tokens=result.output_tokens
-    )
+    await ai_usage.record(user, today, model=settings.openai_model, usage=result.usage)
 
     try:
         return await _act(
@@ -292,9 +290,11 @@ async def show_usage(
         f"Hoy: {today_totals.requests} de {settings.ai_daily_limit} consultas",
         f"Este mes: {month.requests} consultas · {_thousands(month.input_tokens)} tokens de "
         f"entrada · {_thousands(month.output_tokens)} de salida",
+        f"Costo estimado del mes: US$ {month.cost_usd:.4f}".replace(".", ","),
     ]
-    if (cost := month.cost_usd(settings.openai_model)) is not None:
-        lines.append(f"Costo estimado del mes: US$ {cost:.4f}".replace(".", ","))
+    if not pricing.has_price(settings.openai_model):
+        model = escape(settings.openai_model)
+        lines.append(f"⚠️ No sé el precio de {model}: lo que usa no suma al costo.")
     await message.answer("\n".join(lines))
 
 

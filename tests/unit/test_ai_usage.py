@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 import pytest
 
@@ -24,8 +25,7 @@ def test_zero_limit_disables_requests() -> None:
         DailyBudget(limit=0).spend(111, TODAY)
 
 
-def test_cost_estimate() -> None:
-    totals = UsageTotals(requests=1000, input_tokens=1_000_000, output_tokens=100_000)
+def test_cost_in_dollars() -> None:
+    totals = UsageTotals(requests=3, input_tokens=2_700, output_tokens=180, cost_micro_usd=765)
 
-    assert totals.cost_usd("gpt-5.4-nano") == pytest.approx(0.20 + 0.125)
-    assert totals.cost_usd("unknown-model") is None
+    assert totals.cost_usd == Decimal("0.000765")

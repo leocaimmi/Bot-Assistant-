@@ -43,6 +43,10 @@ def test_exposes_timezone_object() -> None:
     assert settings.tz.key == "America/Argentina/Buenos_Aires"
 
 
+def test_ai_defaults_to_the_cheapest_model() -> None:
+    assert make_settings().openai_model == "gpt-6-luna"
+
+
 def test_ai_is_off_without_key_or_budget() -> None:
     assert not make_settings().ai_enabled
     assert not make_settings(openai_api_key="  ").ai_enabled

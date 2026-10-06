@@ -15,8 +15,10 @@ from dataclasses import dataclass
 from typing import Protocol
 
 import openai
+from openai.types.responses import ResponseUsage
 from pydantic import ValidationError
 
+from asistente.ai.pricing import TokenUsage
 from asistente.ai.schema import Interpretation
 
 logger = logging.getLogger(__name__)
@@ -55,8 +57,7 @@ class InterpreterError(Exception):
 @dataclass(frozen=True, slots=True)
 class InterpretationResult:
     interpretation: Interpretation
-    input_tokens: int
-    output_tokens: int
+    usage: TokenUsage
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,12 +107,7 @@ class OpenAIInterpreter:
         if response.status != "completed" or interpretation is None:
             logger.warning("AI answer unusable (status=%s)", response.status)
             raise InterpreterError
-        usage = response.usage
-        return InterpretationResult(
-            interpretation=interpretation,
-            input_tokens=usage.input_tokens if usage else 0,
-            output_tokens=usage.output_tokens if usage else 0,
-        )
+        return InterpretationResult(interpretation, _token_usage(response.usage))
 
     async def close(self) -> None:
         await self._client.close()
@@ -125,6 +121,19 @@ def build_input(text: str, context: InterpreterContext) -> str:
     message = text[:MAX_MESSAGE_LENGTH].replace("<", " ").replace(">", " ")
     return (
         f"Categorías: {categories}\nEjercicios conocidos: {exercises}\n<mensaje>{message}</mensaje>"
+    )
+
+
+def _token_usage(usage: ResponseUsage | None) -> TokenUsage:
+    if usage is None:
+        return TokenUsage(input_tokens=0, output_tokens=0)
+    details = usage.input_tokens_details
+    return TokenUsage(
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        # Counts a model does not report (cache writes before GPT-5.6) are zero.
+        cached_tokens=getattr(details, "cached_tokens", None) or 0,
+        cache_write_tokens=getattr(details, "cache_write_tokens", None) or 0,
     )
 
 
