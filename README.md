@@ -77,6 +77,20 @@ celular muestra la **notificación de Telegram** (si el chat no está silenciado
 - Hasta 30 activos y 200 caracteres cada uno. Las frases que las reglas no entienden las
   interpreta la IA (si está activada) y el bot verifica la fecha antes de crearlo.
 
+### Cuotas y gastos fijos
+
+Se anotan solos cada mes, sin usar la IA, y el bot te avisa en el chat sin sonido.
+
+| Mensaje | Resultado |
+| ------- | --------- |
+| `zapatillas 10.000 cuota 1 de 9` | Anota `zapatillas (1/9)` hoy y la 2/9, 3/9... el mismo día de cada mes |
+| `zapatillas 90.000 en 9 cuotas` | Divide el total (`9 cuotas de 10.000` da el valor de cada una) |
+| `seguro del celu 5.000 todos los meses` | Gasto fijo: hoy y el mismo día de cada mes (también `cada mes`, `mensual`, `fijo`) |
+| `alquiler 300.000 el 10 de cada mes` | Gasto fijo que se anota el 10 (el 31 cae el último día en meses cortos) |
+| `/fijos` | Lo que viene, con botones para dar de baja (lo ya anotado queda) |
+
+Si el bot estuvo apagado, al volver anota lo que se perdió con su fecha original.
+
 ### IA (opcional)
 
 Con `OPENAI_API_KEY` configurada, lo que las reglas no entienden lo interpreta `gpt-6-luna`
@@ -139,7 +153,7 @@ Copiá `.env.example` a `.env` y completalo. `.env` está en `.gitignore`: nunca
 | `BOT_TOKEN` | Sí | Token de @BotFather |
 | `ALLOWED_USER_IDS` | Sí | IDs de Telegram autorizados, separados por coma. El resto se ignora en silencio |
 | `DATABASE_URL` | No | Solo en tu computadora (por defecto `./data/asistente.db`). **No la cargues en Railway**: la imagen usa `/data/asistente.db` (el volumen) |
-| `TIMEZONE` | No | Por defecto `America/Argentina/Buenos_Aires` |
+| `TIMEZONE` | No | Por defecto `America/Argentina/Buenos_Aires`; también es la hora de los logs |
 | `LOG_LEVEL` | No | `DEBUG`, `INFO` (por defecto), `WARNING` o `ERROR` |
 | `OPENAI_API_KEY` | No | Activa la IA para mensajes libres y audios. Sin key, solo reglas |
 | `OPENAI_MODEL` | No | Por defecto `gpt-6-luna`, el más barato |
