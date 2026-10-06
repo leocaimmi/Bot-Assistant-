@@ -180,6 +180,11 @@ def is_reminder_request(text: str) -> bool:
     return _VERB.search(fold(text)) is not None
 
 
+def mentions_reminders(text: str) -> bool:
+    """Whether the text talks about reminders, which are managed from /recordatorios."""
+    return "recordatorio" in fold(text)
+
+
 def parse_reminder(text: str, now: datetime, tz: ZoneInfo) -> ParsedReminder | None:
     """The reminder in ``text``, or ``None`` if its timing is missing or unclear.
 

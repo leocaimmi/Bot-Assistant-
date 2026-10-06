@@ -22,6 +22,7 @@ from asistente.config import Settings
 from asistente.core.errors import UserError
 from asistente.finance.service import FinanceService
 from asistente.gym.service import GymService
+from asistente.reminders.service import ReminderService
 from asistente.users.models import User
 
 # Enough to dictate a whole workout, and a cap on what one message can cost.
@@ -44,6 +45,7 @@ async def handle_voice(
     finance: FinanceService,
     gym: GymService,
     ai_usage: AiUsageService,
+    reminders: ReminderService,
     user: User,
     settings: Settings,
     state: FSMContext,
@@ -86,6 +88,7 @@ async def handle_voice(
             text,
             finance=finance,
             gym=gym,
+            reminders=reminders,
             ai_usage=ai_usage,
             user=user,
             settings=settings,

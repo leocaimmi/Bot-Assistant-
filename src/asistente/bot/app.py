@@ -22,6 +22,7 @@ from asistente.bot.handlers import (
     finance,
     free_text,
     gym,
+    reminders,
     voice,
 )
 from asistente.bot.middlewares import (
@@ -38,6 +39,7 @@ from asistente.finance.categories import CategoryService
 from asistente.finance.defaults import seed_defaults
 from asistente.finance.service import FinanceService
 from asistente.gym.service import GymService
+from asistente.reminders.service import ReminderService
 from asistente.users.service import UserService
 
 logger = logging.getLogger(__name__)
@@ -53,6 +55,7 @@ def build_services(session: AsyncSession, settings: Settings) -> dict[str, objec
         "category_service": CategoryService(session),
         "gym": GymService(session),
         "ai_usage": AiUsageService(session),
+        "reminders": ReminderService(session),
     }
 
 
@@ -83,6 +86,7 @@ def build_dispatcher(
         common.build_router(),
         finance.build_router(),
         gym.build_router(),
+        reminders.build_router(),
         assistant.build_router(),
         free_text.build_router(),  # plain text: commands, workouts, transactions, AI
         voice.build_router(),  # voice: transcribed, then handled like plain text
