@@ -25,6 +25,7 @@ class Intent(StrEnum):
     EDIT = "edit"
     DELETE = "delete"
     WORKOUT = "workout"
+    REMINDER = "reminder"
     UNKNOWN = "unknown"
 
 
@@ -70,6 +71,11 @@ class ExerciseDone(_Strict):
     weight_kg: float | None
 
 
+class ReminderRequest(_Strict):
+    text: str = Field(description="What to remember, short, in the user's words")
+    when: str = Field(description="Only the timing, in the words listed for reminders")
+
+
 class Interpretation(_Strict):
     intent: Intent
     movements: list[Movement]
@@ -77,3 +83,4 @@ class Interpretation(_Strict):
     changes: Changes | None
     exercises: list[ExerciseDone]
     workout_day: str | None
+    reminder: ReminderRequest | None

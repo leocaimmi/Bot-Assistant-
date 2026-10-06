@@ -10,6 +10,7 @@ from asistente.ai.schema import (
     Intent,
     Interpretation,
     Movement,
+    ReminderRequest,
     Target,
 )
 from asistente.ai.transcriber import TranscriberError
@@ -24,6 +25,7 @@ def interpretation(
     changes: Changes | None = None,
     exercises: Sequence[ExerciseDone] = (),
     workout_day: str | None = None,
+    reminder: ReminderRequest | None = None,
 ) -> Interpretation:
     return Interpretation(
         intent=intent,
@@ -32,6 +34,7 @@ def interpretation(
         changes=changes,
         exercises=list(exercises),
         workout_day=workout_day,
+        reminder=reminder,
     )
 
 

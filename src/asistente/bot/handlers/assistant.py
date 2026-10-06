@@ -22,6 +22,7 @@ from asistente.ai.interpreter import (
 from asistente.ai.schema import Changes, Intent, Interpretation, Target
 from asistente.ai.usage import AiUsageService, DailyBudget
 from asistente.bot.handlers import gym as gym_handlers
+from asistente.bot.handlers import reminders as reminder_handlers
 from asistente.bot.handlers.finance import edits, keyboards, views
 from asistente.bot.handlers.finance import entries as finance_entries
 from asistente.config import Settings
@@ -38,6 +39,7 @@ from asistente.finance.service import (
     FinanceService,
 )
 from asistente.gym.service import GymService
+from asistente.reminders.service import ReminderService
 from asistente.users.models import User
 
 AI_UNAVAILABLE = (
@@ -58,6 +60,7 @@ async def interpret(
     budget: DailyBudget,
     finance: FinanceService,
     gym: GymService,
+    reminders: ReminderService,
     ai_usage: AiUsageService,
     user: User,
     settings: Settings,
@@ -82,7 +85,16 @@ async def interpret(
 
     try:
         return await _act(
-            message, text, result.interpretation, today, finance, gym, user, settings, state
+            message,
+            text,
+            result.interpretation,
+            today,
+            finance,
+            gym,
+            reminders,
+            user,
+            settings,
+            state,
         )
     except UserError as error:
         # Answer here instead of raising, so the usage record above is kept.
@@ -97,6 +109,7 @@ async def _act(
     today: date,
     finance: FinanceService,
     gym: GymService,
+    reminders: ReminderService,
     user: User,
     settings: Settings,
     state: FSMContext,
@@ -153,6 +166,14 @@ async def _act(
             day = validation.safe_day(interpretation.workout_day, today) or today
             logged = await gym.log(user, items, day=day)
             await gym_handlers.answer_logged(message, logged, today)
+            return True
+
+        case Intent.REMINDER:
+            parsed = validation.to_reminder(interpretation.reminder, message.date, tz)
+            if parsed is None:
+                return False
+            reminder = await reminders.create(user, parsed, now=message.date)
+            await reminder_handlers.answer_created(message, reminder, settings)
             return True
 
         case Intent.UNKNOWN:

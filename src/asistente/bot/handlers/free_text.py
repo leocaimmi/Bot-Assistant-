@@ -123,6 +123,7 @@ async def route_text(
         budget=ai_budget,
         finance=finance,
         gym=gym,
+        reminders=reminders,
         ai_usage=ai_usage,
         user=user,
         settings=settings,
@@ -189,6 +190,8 @@ async def _run_rules(
 
 
 def _help_for(text: str) -> str:
+    if is_reminder_request(text):
+        return reminder_views.NOT_UNDERSTOOD
     if looks_like_workout(text):
         return gym_views.WORKOUT_FORMAT_HELP
     if looks_like_correction(text):

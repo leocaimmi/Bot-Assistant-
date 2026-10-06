@@ -39,6 +39,10 @@ which); "changes" holds only what changes, the rest null.
 - delete: the user wants to delete an existing movement. Fill "target".
 - workout: the user reports exercises done. One item per exercise. "4x12" means 4 sets of \
 12 reps (sets first). "4 series de 12" is the same. Weight in kg only if written.
+- reminder: the user wants to be reminded of something later. "reminder.when" holds \
+only the timing, rewritten with these words: hoy, mañana, pasado mañana, el lunes, \
+el 15/10, en 20 minutos, en 2 horas, a las 18:30, todos los días, todos los lunes y \
+jueves, de lunes a viernes, el 10 de cada mes, hora de España. No hour if none is said.
 - unknown: anything else.
 
 Rules:
