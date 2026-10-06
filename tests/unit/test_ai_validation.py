@@ -41,6 +41,25 @@ def test_to_entry() -> None:
     assert entry.day == date(2026, 10, 4)
 
 
+def test_the_ai_says_which_way_the_money_went() -> None:
+    entry = validation.to_entry(
+        movement("transferencia a juan", "5000"), "le hice una transferencia a juan de 5000", TODAY
+    )
+
+    assert entry is not None
+    assert entry.kind is TransactionKind.EXPENSE
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [("10:00", (10, 0)), ("9:30", (9, 30)), ("24:00", None), ("10", None), (None, None)],
+)
+def test_safe_time(text: str | None, expected: tuple[int, int] | None) -> None:
+    parsed = validation.safe_time(text)
+
+    assert ((parsed.hour, parsed.minute) if parsed else None) == expected
+
+
 def test_to_entry_rejects_invented_amount() -> None:
     assert validation.to_entry(movement("uber", "9999"), "uber 2000", TODAY) is None
 
@@ -52,6 +71,7 @@ def test_to_target() -> None:
 
     assert (query.words, query.amount_cents, query.day) == (("uber",), 200_000, date(2026, 10, 4))
     assert validation.to_target(None, "x", TODAY).is_empty
+    assert validation.to_target(target(latest=True), "modificalo", TODAY).latest
 
 
 def test_to_exercise_items() -> None:

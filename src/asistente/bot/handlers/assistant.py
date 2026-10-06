@@ -27,7 +27,9 @@ from asistente.bot.handlers.finance import entries as finance_entries
 from asistente.config import Settings
 from asistente.core.errors import UserError
 from asistente.core.text import normalize
+from asistente.finance.models import Transaction
 from asistente.finance.service import (
+    AccountChange,
     AmountChange,
     CategoryChange,
     Change,
@@ -130,7 +132,9 @@ async def _act(
                 validation.to_target(interpretation.target, text, today),
                 shown_as=_target_text(interpretation.target),
             )
-            changes = await _changes(interpretation.changes, text, today, finance, user)
+            changes = await _changes(
+                interpretation.changes, transaction, text, today, finance, user, settings
+            )
             if changes is None:
                 return False
             if not changes:
@@ -156,7 +160,13 @@ async def _act(
 
 
 async def _changes(
-    changes: Changes | None, text: str, today: date, finance: FinanceService, user: User
+    changes: Changes | None,
+    transaction: Transaction,
+    text: str,
+    today: date,
+    finance: FinanceService,
+    user: User,
+    settings: Settings,
 ) -> list[Change] | None:
     """Validated changes, ``[]`` when none were asked, ``None`` if any value is invalid."""
     if changes is None:
@@ -175,11 +185,19 @@ async def _changes(
         if category is None:
             return None
         result.append(CategoryChange(category))
-    if changes.day is not None:
-        day = validation.safe_day(changes.day, today)
-        if day is None:
+    if changes.day is not None or changes.time is not None:
+        # Only a time ("a las 10") keeps the movement's day.
+        current_day = transaction.occurred_at.astimezone(settings.tz).date()
+        day = validation.safe_day(changes.day, today) if changes.day else current_day
+        at = validation.safe_time(changes.time)
+        if day is None or (changes.time is not None and at is None):
             return None
-        result.append(DayChange(day))
+        result.append(DayChange(day, at))
+    if changes.account is not None:
+        account = await finance.find_account(user, changes.account)
+        if account is None:
+            return None
+        result.append(AccountChange(account))
     if changes.description is not None and changes.description.strip():
         result.append(DescriptionChange(" ".join(changes.description.split())))
     return result

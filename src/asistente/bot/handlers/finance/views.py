@@ -89,6 +89,11 @@ def change_field(transaction: Transaction, change: Change, tz: ZoneInfo) -> tupl
             return "Cuenta", f"{account.emoji} {escape(account.name)}"
 
 
+def is_noop(transaction: Transaction, change: Change, tz: ZoneInfo) -> bool:
+    """``True`` when ``change`` would leave the field as it already is."""
+    return change_field(transaction, change, tz)[1] == _new_value(change, tz)
+
+
 def change_preview(transaction: Transaction, changes: list[Change], tz: ZoneInfo) -> str:
     """``"Importe: $2.000 → $2.500"`` lines for changes not applied yet."""
     lines = []

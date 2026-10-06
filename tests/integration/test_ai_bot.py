@@ -87,6 +87,43 @@ async def test_edit_shows_a_preview_and_applies_on_confirmation(
     assert await _amounts(session_factory) == [250_000]
 
 
+async def test_edit_of_the_last_movement_with_its_time(
+    ai_harness: BotHarness,
+    fake_interpreter: FakeInterpreter,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    await ai_harness.send("transferencia utn 276.000")
+    fake_interpreter.will_answer(
+        interpretation(
+            Intent.EDIT,
+            target=target(latest=True),
+            changes=changes(amount="276.500", day="hoy", time="10:00", account="mercado pago"),
+        )
+    )
+
+    await ai_harness.send("perdón, poné 276.500 y la fecha fue hoy a las 10, la tengo en mp")
+
+    assert "¿Aplico este cambio?" in ai_harness.last_reply
+    assert "Importe: $276.000 → $276.500" in ai_harness.last_reply
+    assert " 10:00" in ai_harness.last_reply
+    assert "Cuenta" not in ai_harness.last_reply  # it already was in Mercado Pago
+    await ai_harness.click(ai_harness.button("Aplicar"))
+    assert await _amounts(session_factory) == [27_650_000]
+
+
+async def test_a_sent_transfer_is_an_expense(
+    ai_harness: BotHarness, fake_interpreter: FakeInterpreter
+) -> None:
+    fake_interpreter.will_answer(
+        interpretation(Intent.REGISTER, movements=[movement("transferencia a juan", "5000")])
+    )
+
+    await ai_harness.send("hoy le hice una transferencia a juan de 5000 por el asado")
+
+    assert "Gasto registrado" in ai_harness.last_reply
+    assert "📤 Transferencias enviadas" in ai_harness.last_reply
+
+
 async def test_edit_can_be_cancelled(
     ai_harness: BotHarness,
     fake_interpreter: FakeInterpreter,

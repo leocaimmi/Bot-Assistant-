@@ -47,9 +47,13 @@ def movement(
 
 
 def target(
-    description: str | None = None, amount: str | None = None, day: str | None = None
+    description: str | None = None,
+    amount: str | None = None,
+    day: str | None = None,
+    *,
+    latest: bool = False,
 ) -> Target:
-    return Target(description=description, amount=amount, day=day)
+    return Target(description=description, amount=amount, day=day, latest=latest)
 
 
 def changes(
@@ -58,8 +62,17 @@ def changes(
     description: str | None = None,
     category: str | None = None,
     day: str | None = None,
+    time: str | None = None,
+    account: str | None = None,
 ) -> Changes:
-    return Changes(amount=amount, description=description, category=category, day=day)
+    return Changes(
+        amount=amount,
+        description=description,
+        category=category,
+        day=day,
+        time=time,
+        account=account,
+    )
 
 
 def exercise(

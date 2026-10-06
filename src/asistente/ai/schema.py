@@ -35,7 +35,9 @@ class _Strict(BaseModel):
 class Movement(_Strict):
     description: str = Field(description="Short, user's words, no amount/date/account")
     amount: str = Field(description="Digits, Argentine format: 2000, 200.000, 1.500,50")
-    income: bool = Field(description="True only if money was received")
+    income: bool = Field(
+        description="True if received (cobré, me transfirieron); false if paid or sent"
+    )
     day: str | None = Field(description="hoy, ayer, anteayer or dd/mm as written")
     account: str | None = Field(description="Only if mentioned: mp, efectivo, banco")
 
@@ -46,6 +48,7 @@ class Target(_Strict):
     description: str | None
     amount: str | None
     day: str | None
+    latest: bool = Field(description="True for the last one, or if it is not said which")
 
 
 class Changes(_Strict):
@@ -55,6 +58,8 @@ class Changes(_Strict):
     description: str | None
     category: str | None = Field(description="One of the given categories")
     day: str | None
+    time: str | None = Field(description="24h HH:MM")
+    account: str | None = Field(description="mp, efectivo or banco")
 
 
 class ExerciseDone(_Strict):

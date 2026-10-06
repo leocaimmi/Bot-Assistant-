@@ -48,6 +48,13 @@ async def propose(
     tz: ZoneInfo,
 ) -> None:
     """Show what would change and keep it until the user applies or discards it."""
+    changes = [change for change in changes if not views.is_noop(transaction, change, tz)]
+    if not changes:
+        await message.answer(
+            views.transaction_card(transaction, tz, title="👌 Ya estaba así"),
+            reply_markup=keyboards.transaction_actions(transaction.id),
+        )
+        return
     token = secrets.token_hex(4)
     await state.update_data({PENDING_EDIT_KEY: _pending(token, transaction.id, changes)})
     preview = views.change_preview(transaction, changes, tz)
