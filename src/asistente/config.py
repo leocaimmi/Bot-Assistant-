@@ -39,6 +39,8 @@ class Settings(DatabaseSettings):
     openai_api_key: SecretStr | None = None
     # The cheapest model with Structured Outputs (prices in ai/pricing.py).
     openai_model: str = Field(default="gpt-6-luna", min_length=1)
+    # Speech-to-text for voice messages: the cheapest; gpt-transcribe is more accurate.
+    openai_transcription_model: str = Field(default="gpt-4o-mini-transcribe", min_length=1)
     # Maximum AI interpretations per user and day (0 disables the AI).
     ai_daily_limit: int = Field(default=100, ge=0, le=10_000)
 

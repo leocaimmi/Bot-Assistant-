@@ -56,6 +56,14 @@ TOKEN_PRICES: dict[str, TokenPrices] = {
     ),
 }
 
+# US dollars per minute of audio (OpenAI's estimate for the models billed by token).
+TRANSCRIPTION_PRICES: dict[str, Decimal] = {
+    "gpt-4o-mini-transcribe": Decimal("0.003"),
+    "gpt-transcribe": Decimal("0.0045"),
+    "gpt-4o-transcribe": Decimal("0.006"),
+    "whisper-1": Decimal("0.006"),
+}
+
 
 def response_cost(model: str, usage: TokenUsage) -> int | None:
     """Micro-dollars for one response (rounded up), ``None`` if the price is unknown."""
@@ -72,8 +80,19 @@ def response_cost(model: str, usage: TokenUsage) -> int | None:
     return math.ceil(cost)
 
 
+def transcription_cost(model: str, seconds: int) -> int | None:
+    """Micro-dollars for ``seconds`` of audio (rounded up), ``None`` if the price is unknown."""
+    per_minute = _price_of(TRANSCRIPTION_PRICES, model)
+    if per_minute is None:
+        return None
+    return math.ceil(per_minute * seconds * 1_000_000 / 60)
+
+
 def has_price(model: str) -> bool:
-    return _price_of(TOKEN_PRICES, model) is not None
+    return (
+        _price_of(TOKEN_PRICES, model) is not None
+        or _price_of(TRANSCRIPTION_PRICES, model) is not None
+    )
 
 
 def _price_of(prices: Mapping[str, PriceT], model: str) -> PriceT | None:

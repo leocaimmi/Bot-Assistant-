@@ -45,6 +45,7 @@ def test_exposes_timezone_object() -> None:
 
 def test_ai_defaults_to_the_cheapest_model() -> None:
     assert make_settings().openai_model == "gpt-6-luna"
+    assert make_settings().openai_transcription_model == "gpt-4o-mini-transcribe"
 
 
 def test_ai_is_off_without_key_or_budget() -> None:

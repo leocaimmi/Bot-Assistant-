@@ -25,7 +25,15 @@ def test_zero_limit_disables_requests() -> None:
         DailyBudget(limit=0).spend(111, TODAY)
 
 
-def test_cost_in_dollars() -> None:
-    totals = UsageTotals(requests=3, input_tokens=2_700, output_tokens=180, cost_micro_usd=765)
+def test_totals() -> None:
+    totals = UsageTotals(
+        requests=3,
+        input_tokens=2_700,
+        output_tokens=180,
+        transcriptions=2,
+        audio_seconds=20,
+        cost_micro_usd=1_765,
+    )
 
-    assert totals.cost_usd == Decimal("0.000765")
+    assert totals.calls == 5
+    assert totals.cost_usd == Decimal("0.001765")

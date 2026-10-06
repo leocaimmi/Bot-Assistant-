@@ -30,6 +30,7 @@ def test_users_example() -> None:
         "hice pecho banco plano 4 series de 12",
         "hice pecho banco plano 4 series por 12 reps",
         "Pecho: Banco plano 4 x 12",
+        "pecho banco plano 4 por 12",
         "pecho banco plano 4\u00d712",
     ],
 )
@@ -99,10 +100,20 @@ def test_reads_the_day() -> None:
         "monitor 24x7 15000",
         "pecho: banco plano 4x12, algo raro",
         "pecho: banco plano 4x12 99999kg",
+        "pecho: banco plano 4x12 inclinado 3x8",
     ],
 )
 def test_rejects_what_does_not_follow_the_format(text: str) -> None:
     assert parse_workout(text, TODAY) is None
+
+
+def test_spoken_style() -> None:
+    items = _items("Hoy hice pecho: banco plano 4 por 12 con 60 kilos e inclinado 3 por 8")
+
+    assert items == (
+        ExerciseItem("Banco plano", CHEST, sets=4, reps=12, weight_grams=60_000),
+        ExerciseItem("Inclinado", CHEST, sets=3, reps=8, weight_grams=None),
+    )
 
 
 def test_looks_like_workout() -> None:

@@ -6,6 +6,7 @@ from datetime import date
 from asistente.core.dates import parse_day
 from asistente.core.errors import UserError
 from asistente.core.money import find_amounts
+from asistente.core.text import fold
 from asistente.finance.models import TransactionKind
 
 
@@ -30,6 +31,11 @@ class ParsedEntry:
 
 
 MAX_SIMPLE_ENTRY_TOKENS = 7
+
+# Punctuation around a word ("uber," or "(efectivo)") is not part of the description.
+_EDGE_PUNCTUATION = ".,;:!?¡¿()\"'«»"
+# The amount is always in pesos: "super 2000 pesos" is just "super".
+_CURRENCY_WORDS = {"peso", "pesos", "ars"}
 
 
 def is_simple_entry(text: str) -> bool:
@@ -68,9 +74,16 @@ def parse_entry(text: str, *, today: date) -> ParsedEntry:
             used.add(index)
             break
 
-    words = tuple(
-        token
-        for index, token in enumerate(tokens)
-        if index not in used and any(char.isalnum() for char in token)
+    words = (
+        token.strip(_EDGE_PUNCTUATION) for index, token in enumerate(tokens) if index not in used
     )
-    return ParsedEntry(amount_cents=amount.cents, words=words, kind=kind, day=day)
+    return ParsedEntry(
+        amount_cents=amount.cents,
+        words=tuple(word for word in words if _is_description_word(word)),
+        kind=kind,
+        day=day,
+    )
+
+
+def _is_description_word(word: str) -> bool:
+    return any(char.isalnum() for char in word) and fold(word) not in _CURRENCY_WORDS
