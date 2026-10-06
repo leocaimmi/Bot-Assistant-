@@ -1,4 +1,4 @@
-"""When a reminder fires: once, every day, on some weekdays or on a day of every month.
+"""When something repeats: once, every day, on some weekdays or on a day of every month.
 
 Everything here works in the user's local time; the database keeps the next run in UTC.
 """

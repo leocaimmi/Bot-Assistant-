@@ -4,9 +4,9 @@ import pytest
 
 from asistente.ai import validation
 from asistente.ai.schema import ExerciseDone, ReminderRequest
+from asistente.core.schedule import Repeat
 from asistente.finance.models import TransactionKind
 from asistente.gym.models import MuscleGroup
-from asistente.reminders.schedule import Repeat
 from tests.ai_factories import exercise, movement, target
 from tests.factories import BUENOS_AIRES
 

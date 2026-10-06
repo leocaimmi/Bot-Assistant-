@@ -3,13 +3,13 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from asistente.core.schedule import WORKDAYS, Repeat
 from asistente.reminders.parser import (
     clean_text,
     is_reminder_request,
     parse_reminder,
     parse_when,
 )
-from asistente.reminders.schedule import WORKDAYS, Repeat
 from tests.factories import BUENOS_AIRES
 
 # Monday 5 October 2026, 10:00 in Buenos Aires.

@@ -3,7 +3,7 @@ from datetime import datetime, time
 
 import pytest
 
-from asistente.reminders.schedule import (
+from asistente.core.schedule import (
     WORKDAYS,
     Repeat,
     Schedule,

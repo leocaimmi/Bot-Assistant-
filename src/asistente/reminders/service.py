@@ -7,9 +7,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from asistente.core.errors import UserError
+from asistente.core.schedule import Repeat, next_occurrence, weekdays_to_mask
 from asistente.reminders.models import MAX_TEXT_LENGTH, Reminder
 from asistente.reminders.parser import ParsedReminder
-from asistente.reminders.schedule import Repeat, next_occurrence, weekdays_to_mask
 from asistente.users.models import User
 
 MAX_ACTIVE_REMINDERS = 30  # they all fit in one /recordatorios message
