@@ -32,6 +32,24 @@ def created(reminder: Reminder, tz: ZoneInfo, *, now: datetime) -> str:
     return "\n".join(lines)
 
 
+def fired(reminder: Reminder, tz: ZoneInfo, *, now: datetime, late: bool) -> str:
+    """The reminder itself, as it arrives (and notifies) when it is due."""
+    lines = [f"⏰ <b>{title(reminder)}</b>"]
+    if late:
+        due = run_label(reminder.next_run_at.astimezone(tz), now.astimezone(tz).date())
+        lines.append(f"<i>Era para {due}: el bot estaba apagado.</i>")
+    return "\n".join(lines)
+
+
+def done(reminder: Reminder) -> str:
+    return f"✅ <s>{title(reminder)}</s>"
+
+
+def snoozed(copy: Reminder, tz: ZoneInfo) -> str:
+    again = at_label(copy.next_run_at.astimezone(tz).time())
+    return f"⏳ {title(copy)}\nTe lo vuelvo a recordar {again}."
+
+
 def title(reminder: Reminder) -> str:
     return escape(reminder.text[:1].upper() + reminder.text[1:])
 

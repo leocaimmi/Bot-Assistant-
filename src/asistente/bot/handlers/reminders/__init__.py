@@ -1,4 +1,6 @@
-"""Reminders: created from a message (typed or spoken) and shown with a button to delete."""
+"""Reminders: created from a message (typed or spoken), and their buttons."""
+
+from datetime import UTC, datetime
 
 from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery, Message
@@ -9,7 +11,11 @@ from asistente.bot.ui import edit_or_send
 from asistente.config import Settings
 from asistente.reminders.models import Reminder
 from asistente.reminders.parser import parse_reminder
-from asistente.reminders.service import ReminderService
+from asistente.reminders.service import (
+    SNOOZE_MINUTES,
+    ReminderNotFoundError,
+    ReminderService,
+)
 from asistente.users.models import User
 
 
@@ -44,8 +50,42 @@ async def delete(
     await callback.answer()
 
 
+async def mark_done(
+    callback: CallbackQuery,
+    callback_data: ReminderCallback,
+    bot: Bot,
+    reminders: ReminderService,
+    user: User,
+) -> None:
+    try:
+        text = views.done(await reminders.get(user, callback_data.reminder_id))
+    except ReminderNotFoundError:
+        text = "✅ Listo"
+    await edit_or_send(callback, bot, text, None)
+    await callback.answer("¡Listo!")
+
+
+async def snooze(
+    callback: CallbackQuery,
+    callback_data: ReminderCallback,
+    bot: Bot,
+    reminders: ReminderService,
+    user: User,
+    settings: Settings,
+) -> None:
+    copy = await reminders.snooze(user, callback_data.reminder_id, now=datetime.now(UTC))
+    await edit_or_send(callback, bot, views.snoozed(copy, settings.tz), None)
+    await callback.answer(f"Te aviso en {SNOOZE_MINUTES} minutos")
+
+
 def build_router() -> Router:
     router = Router(name="reminders")
+    router.callback_query.register(
+        mark_done, ReminderCallback.filter(F.action == ReminderAction.DONE)
+    )
+    router.callback_query.register(
+        snooze, ReminderCallback.filter(F.action == ReminderAction.SNOOZE)
+    )
     router.callback_query.register(
         delete, ReminderCallback.filter(F.action == ReminderAction.DELETE)
     )
