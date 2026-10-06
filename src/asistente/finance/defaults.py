@@ -12,6 +12,10 @@ from asistente.users.models import User
 EXPENSE = TransactionKind.EXPENSE
 INCOME = TransactionKind.INCOME
 
+# "transferencia" alone is money received; a transfer the user sends is an expense.
+RECEIVED_TRANSFERS = "Transferencias"
+SENT_TRANSFERS = "Transferencias enviadas"
+
 
 @dataclass(frozen=True, slots=True)
 class DefaultCategory:
@@ -150,9 +154,10 @@ DEFAULT_CATEGORIES = (
         EXPENSE,
         ("salida", "boliche", "bar", "birra", "cerveza", "cine", "teatro", "recital"),
     ),
+    DefaultCategory(SENT_TRANSFERS, "📤", EXPENSE),
     DefaultCategory("Otros gastos", "📦", EXPENSE, is_fallback=True),
     DefaultCategory("Sueldo", "💼", INCOME, ("sueldo", "salario", "aguinaldo")),
-    DefaultCategory("Transferencias", "🔁", INCOME, ("transferencia", "transf")),
+    DefaultCategory(RECEIVED_TRANSFERS, "🔁", INCOME, ("transferencia", "transf")),
     DefaultCategory("Freelance", "💻", INCOME, ("freelance",)),
     DefaultCategory(
         "Otros ingresos",

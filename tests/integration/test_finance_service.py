@@ -51,12 +51,36 @@ async def _category_id(session: AsyncSession, user: User, name: str) -> int:
         (
             "- 5000 transferencia a juan",
             EXPENSE,
-            "Otros gastos",
+            "Transferencias enviadas",
             "Mercado Pago",
             500_000,
             "transferencia a juan",
         ),
         ("2000 efectivo", EXPENSE, "Otros gastos", "Efectivo", 200_000, ""),
+        (
+            "hice una transferencia a juan 5000",
+            EXPENSE,
+            "Transferencias enviadas",
+            "Mercado Pago",
+            500_000,
+            "hice una transferencia a juan",
+        ),
+        (
+            "me transfirieron 5000 de la utn",
+            INCOME,
+            "Transferencias",
+            "Mercado Pago",
+            500_000,
+            "me transfirieron de la utn",
+        ),
+        (
+            "recibí transferencia 276.000",
+            INCOME,
+            "Transferencias",
+            "Mercado Pago",
+            27_600_000,
+            "recibí transferencia",
+        ),
     ],
 )
 async def test_register(
@@ -108,7 +132,7 @@ async def test_toggle_kind_rematches_category(finance: FinanceService, user: Use
     transaction = await finance.register(user, "transferencia 1000", now=NOW)
 
     as_expense = await finance.toggle_kind(user, transaction.id)
-    assert (as_expense.kind, as_expense.category.name) == (EXPENSE, "Otros gastos")
+    assert (as_expense.kind, as_expense.category.name) == (EXPENSE, "Transferencias enviadas")
 
     as_income = await finance.toggle_kind(user, transaction.id)
     assert (as_income.kind, as_income.category.name) == (INCOME, "Transferencias")

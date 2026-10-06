@@ -2,16 +2,22 @@
 
 from zoneinfo import ZoneInfo
 
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from asistente.bot.handlers.finance import keyboards, views
+from asistente.bot.handlers.finance import edits, keyboards, views
 from asistente.finance.commands import CommandKind, TextCommand, split_new_value
 from asistente.finance.service import FinanceService
 from asistente.users.models import User
 
 
 async def handle_command(
-    message: Message, command: TextCommand, finance: FinanceService, user: User, tz: ZoneInfo
+    message: Message,
+    command: TextCommand,
+    finance: FinanceService,
+    user: User,
+    tz: ZoneInfo,
+    state: FSMContext,
 ) -> None:
     today = message.date.astimezone(tz).date()
 
@@ -23,19 +29,13 @@ async def handle_command(
         )
         return
 
-    # "cambiar uber 2000 a 2500": apply right away (it can always be edited back).
+    # "cambiar uber 2000 a 2500": show before → after and apply it on OK.
     if (parts := split_new_value(command.rest)) is not None:
         target_text, new_text = parts
         change = await finance.resolve_change(user, new_text, today=today)
         if change is not None:
             transaction = await finance.find_by_text(user, target_text, today=today)
-            label, before = views.change_field(transaction, change, tz)
-            updated = await finance.apply_change(user, transaction.id, change)
-            _, after = views.change_field(updated, change, tz)
-            await message.answer(
-                views.transaction_card(updated, tz, title=f"✏️ {label}: {before} → {after}"),
-                reply_markup=keyboards.transaction_actions(updated.id),
-            )
+            await edits.propose(message, transaction, [change], state, tz)
             return
 
     # "cambiar uber 2000": show every editable field.

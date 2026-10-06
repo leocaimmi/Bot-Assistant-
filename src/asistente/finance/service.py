@@ -1,7 +1,7 @@
 """Business rules for transactions. Every operation is scoped to the given user."""
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, time
 from html import escape
 from math import ceil
 from zoneinfo import ZoneInfo
@@ -13,6 +13,7 @@ from asistente.core.errors import UserError
 from asistente.core.money import MAX_AMOUNT_CENTS, parse_amount
 from asistente.core.text import normalize
 from asistente.finance.commands import TargetQuery, parse_target
+from asistente.finance.defaults import RECEIVED_TRANSFERS, SENT_TRANSFERS
 from asistente.finance.matching import find_phrase
 from asistente.finance.models import (
     MAX_DESCRIPTION_LENGTH,
@@ -34,7 +35,7 @@ SEARCH_WINDOW = 300
 class MissingTargetError(UserError):
     def __init__(self) -> None:
         super().__init__(
-            "Decime cuál, por ejemplo <code>borrar uber 2000</code> "
+            "🤔 Decime cuál, por ejemplo <code>cambiar uber 2000 a 2500</code> "
             "o <code>borrar el último</code>."
         )
 
@@ -83,6 +84,7 @@ class CategoryChange:
 @dataclass(frozen=True, slots=True)
 class DayChange:
     day: date
+    at: time | None = None  # None keeps the time of day
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,7 +92,12 @@ class DescriptionChange:
     description: str
 
 
-Change = AmountChange | CategoryChange | DayChange | DescriptionChange
+@dataclass(frozen=True, slots=True)
+class AccountChange:
+    account: Account
+
+
+Change = AmountChange | CategoryChange | DayChange | DescriptionChange | AccountChange
 
 
 @dataclass(frozen=True, slots=True)
@@ -164,13 +171,15 @@ class FinanceService:
         return match
 
     async def resolve_change(self, user: User, text: str, *, today: date) -> Change | None:
-        """What ``"2500"``, ``"comida"`` or ``"ayer"`` would change; ``None`` if nothing."""
+        """What ``"2500"``, ``"comida"``, ``"ayer"`` or ``"efectivo"`` would change."""
         try:
             return AmountChange(parse_amount(text))
         except ValueError:
             pass
         if (day := parse_day(text, today)) is not None:
             return DayChange(day)
+        if (account := await self.find_account(user, text)) is not None:
+            return AccountChange(account)
         categories = {normalize(c.name): c for c in await self._repository.categories(user.id)}
         category = categories.get(normalize(text))
         return CategoryChange(category) if category is not None else None
@@ -181,10 +190,12 @@ class FinanceService:
                 return await self.change_amount(user, transaction_id, cents)
             case CategoryChange(category):
                 return await self.change_category(user, transaction_id, category.id)
-            case DayChange(day):
-                return await self.change_day(user, transaction_id, day)
+            case DayChange(day, at):
+                return await self.change_day(user, transaction_id, day, at=at)
             case DescriptionChange(description):
                 return await self.change_description(user, transaction_id, description)
+            case AccountChange(account):
+                return await self.change_account(user, transaction_id, account.id)
 
     async def get(self, user: User, transaction_id: int) -> Transaction:
         transaction = await self._repository.transaction(user.id, transaction_id)
@@ -216,6 +227,14 @@ class FinanceService:
     async def accounts(self, user: User) -> list[Account]:
         return await self._repository.accounts(user.id)
 
+    async def find_account(self, user: User, text: str) -> Account | None:
+        """The account called ``text`` ("mp", "efectivo", "Banco"), if any."""
+        wanted = normalize(text)
+        for account in await self._repository.accounts(user.id):
+            if wanted == normalize(account.name) or wanted in account.aliases:
+                return account
+        return None
+
     async def change_amount(self, user: User, transaction_id: int, cents: int) -> Transaction:
         if not 0 < cents <= MAX_AMOUNT_CENTS:
             raise InvalidAmountError
@@ -232,11 +251,13 @@ class FinanceService:
         await self._repository.flush()
         return transaction
 
-    async def change_day(self, user: User, transaction_id: int, day: date) -> Transaction:
-        """Move the transaction to another day, keeping its time of day."""
+    async def change_day(
+        self, user: User, transaction_id: int, day: date, *, at: time | None = None
+    ) -> Transaction:
+        """Move the transaction to another day, at ``at`` or keeping its time of day."""
         transaction = await self.get(user, transaction_id)
-        local_time = transaction.occurred_at.astimezone(self._tz).time()
-        transaction.occurred_at = at_local_time(day, local_time, self._tz)
+        clock = at if at is not None else transaction.occurred_at.astimezone(self._tz).time()
+        transaction.occurred_at = at_local_time(day, clock, self._tz)
         await self._repository.flush()
         return transaction
 
@@ -314,12 +335,24 @@ class FinanceService:
         match = find_phrase(words, by_keyword)
         if match is not None:
             return match.value
+        # A transfer goes either way: "me transfirieron" is received, while "hice una
+        # transferencia" or "le transferí" is sent.
+        if kind is not None and _mentions_transfer(words):
+            name = SENT_TRANSFERS if kind is TransactionKind.EXPENSE else RECEIVED_TRANSFERS
+            categories = await self._repository.categories(user.id, kind)
+            transfers = next((c for c in categories if c.name == name), None)
+            if transfers is not None:
+                return transfers
 
         fallback_kind = kind or TransactionKind.EXPENSE
         fallback = await self._repository.fallback_category(user.id, fallback_kind)
         if fallback is None:
             raise FinanceNotReadyError(f"user {user.id} has no {fallback_kind} fallback")
         return fallback
+
+
+def _mentions_transfer(words: list[str]) -> bool:
+    return any(normalize(word).startswith("transf") for word in words)
 
 
 def _clean_description(text: str) -> str:

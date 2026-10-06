@@ -5,7 +5,7 @@ the bot's own deterministic parsers, and an amount must exist in what the user w
 """
 
 import re
-from datetime import date
+from datetime import date, time
 
 from asistente.ai.schema import ExerciseDone, Movement, Target
 from asistente.core.dates import parse_day
@@ -23,6 +23,7 @@ MAX_EXERCISES = 20
 MAX_WORDS = 20
 
 _DIGITS = re.compile(r"\d+")
+_CLOCK = re.compile(r"(?P<hour>\d{1,2}):(?P<minute>\d{2})")
 
 
 def safe_amount(text: str | None, message: str) -> int | None:
@@ -45,6 +46,15 @@ def safe_day(text: str | None, today: date) -> date | None:
     return parse_day(text, today) if text else None
 
 
+def safe_time(text: str | None) -> time | None:
+    """A 24h ``HH:MM`` time of day, or ``None``."""
+    matched = _CLOCK.fullmatch(text.strip()) if text else None
+    if matched is None:
+        return None
+    hour, minute = int(matched["hour"]), int(matched["minute"])
+    return time(hour, minute) if hour < 24 and minute < 60 else None
+
+
 def to_entry(movement: Movement, message: str, today: date) -> ParsedEntry | None:
     cents = safe_amount(movement.amount, message)
     if cents is None:
@@ -53,7 +63,8 @@ def to_entry(movement: Movement, message: str, today: date) -> ParsedEntry | Non
     return ParsedEntry(
         amount_cents=cents,
         words=tuple(words[:MAX_WORDS]),
-        kind=TransactionKind.INCOME if movement.income else None,
+        # The AI says which way the money went: "hice una transferencia" is an expense.
+        kind=TransactionKind.INCOME if movement.income else TransactionKind.EXPENSE,
         day=safe_day(movement.day, today),
     )
 
@@ -66,7 +77,7 @@ def to_target(target: Target | None, message: str, today: date) -> TargetQuery:
         words=words,
         amount_cents=safe_amount(target.amount, message),
         day=safe_day(target.day, today),
-        latest=False,
+        latest=target.latest,
     )
 
 

@@ -6,7 +6,7 @@ from datetime import date
 from asistente.core.dates import parse_day
 from asistente.core.errors import UserError
 from asistente.core.money import find_amounts
-from asistente.core.text import fold
+from asistente.core.text import fold, normalize
 from asistente.finance.models import TransactionKind
 
 
@@ -36,6 +36,34 @@ MAX_SIMPLE_ENTRY_TOKENS = 7
 _EDGE_PUNCTUATION = ".,;:!?¡¿()\"'«»"
 # The amount is always in pesos: "super 2000 pesos" is just "super".
 _CURRENCY_WORDS = {"peso", "pesos", "ars"}
+# Which way the money went when there is no "+" or "-": a transfer can be received
+# ("me transfirieron") or sent ("le transferí", "hice una transferencia").
+_INCOME_PHRASES = (
+    "recibi",
+    "cobre",
+    "me pagaron",
+    "me transfirieron",
+    "me depositaron",
+    "me mandaron",
+    "me enviaron",
+    "me pasaron",
+    "me llego",
+    "me llegaron",
+    "me devolvieron",
+)
+_EXPENSE_PHRASES = (
+    "pague",
+    "gaste",
+    "compre",
+    "transferi",
+    "envie",
+    "mande",
+    "le pase",
+    "le di",
+    "hice una transferencia",
+    "hice un pago",
+    "hice una compra",
+)
 
 
 def is_simple_entry(text: str) -> bool:
@@ -74,6 +102,8 @@ def parse_entry(text: str, *, today: date) -> ParsedEntry:
             used.add(index)
             break
 
+    if kind is None:
+        kind = _direction(tokens)
     words = (
         token.strip(_EDGE_PUNCTUATION) for index, token in enumerate(tokens) if index not in used
     )
@@ -83,6 +113,16 @@ def parse_entry(text: str, *, today: date) -> ParsedEntry:
         kind=kind,
         day=day,
     )
+
+
+def _direction(tokens: list[str]) -> TransactionKind | None:
+    """Income or expense when the words say so ("recibí", "pagué"); None if unclear."""
+    text = f" {normalize(' '.join(tokens))} "
+    income = any(f" {phrase} " in text for phrase in _INCOME_PHRASES)
+    expense = any(f" {phrase} " in text for phrase in _EXPENSE_PHRASES)
+    if income == expense:
+        return None
+    return TransactionKind.INCOME if income else TransactionKind.EXPENSE
 
 
 def _is_description_word(word: str) -> bool:

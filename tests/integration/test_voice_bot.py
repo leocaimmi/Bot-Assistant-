@@ -75,12 +75,15 @@ async def test_what_the_rules_do_not_understand_goes_to_the_ai(
 
 
 async def test_errors_after_transcribing_keep_the_usage(
-    ai_harness: BotHarness, fake_transcriber: FakeTranscriber
+    ai_harness: BotHarness, fake_transcriber: FakeTranscriber, fake_interpreter: FakeInterpreter
 ) -> None:
-    fake_transcriber.will_hear("Borrar netflix.")
+    fake_interpreter.will_answer(*[interpretation(Intent.UNKNOWN)] * 2)
+    await ai_harness.send("mensaje raro")
+    await ai_harness.send("otro mensaje raro")  # 2 of the 3 daily requests
+    fake_transcriber.will_hear("Gasté dos lucas en el súper.")
 
-    await ai_harness.send_voice(duration=4)
-    assert "No encontré un movimiento que coincida con «netflix»" in ai_harness.last_reply
+    await ai_harness.send_voice(duration=4)  # the transcription takes the last one
+    assert "límite de 3 consultas" in ai_harness.last_reply
 
     await ai_harness.send("/ia")
     assert "🎙 1 audio (gpt-4o-mini-transcribe): 4 s" in ai_harness.last_reply

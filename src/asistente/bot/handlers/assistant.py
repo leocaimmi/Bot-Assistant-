@@ -1,22 +1,16 @@
 """Messages the rules do not understand, interpreted by the AI with one request each.
 
 Nothing the AI says is trusted blindly: values are validated (``ai.validation``), deletes
-always ask for confirmation and edits show a before/after preview first. The pending
-edit is kept server-side; its button only carries a random token.
+always ask for confirmation and edits show a before/after preview first.
 """
 
-import secrets
 from datetime import date
 from html import escape
-from typing import Annotated, Any
 
-from aiogram import Bot, Router
+from aiogram import Router
 from aiogram.filters import Command
-from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
-from aiogram.utils.keyboard import InlineKeyboardBuilder
-from pydantic import Field
+from aiogram.types import Message
 
 from asistente.ai import pricing, validation
 from asistente.ai.interpreter import (
@@ -28,13 +22,14 @@ from asistente.ai.interpreter import (
 from asistente.ai.schema import Changes, Intent, Interpretation, Target
 from asistente.ai.usage import AiUsageService, DailyBudget
 from asistente.bot.handlers import gym as gym_handlers
+from asistente.bot.handlers.finance import edits, keyboards, views
 from asistente.bot.handlers.finance import entries as finance_entries
-from asistente.bot.handlers.finance import keyboards, views
-from asistente.bot.ui import edit_or_send
 from asistente.config import Settings
 from asistente.core.errors import UserError
 from asistente.core.text import normalize
+from asistente.finance.models import Transaction
 from asistente.finance.service import (
+    AccountChange,
     AmountChange,
     CategoryChange,
     Change,
@@ -53,12 +48,6 @@ AI_DISABLED = (
     "🤖 La IA está desactivada: falta configurar <code>OPENAI_API_KEY</code>. "
     "El bot funciona igual con el formato simple."
 )
-PENDING_EDIT_KEY = "ai_pending_edit"
-
-
-class AiEditCallback(CallbackData, prefix="aie"):
-    apply: bool
-    token: Annotated[str, Field(pattern=r"^[0-9a-f]{8}$")]
 
 
 async def interpret(
@@ -143,7 +132,9 @@ async def _act(
                 validation.to_target(interpretation.target, text, today),
                 shown_as=_target_text(interpretation.target),
             )
-            changes = await _changes(interpretation.changes, text, today, finance, user)
+            changes = await _changes(
+                interpretation.changes, transaction, text, today, finance, user, settings
+            )
             if changes is None:
                 return False
             if not changes:
@@ -152,13 +143,7 @@ async def _act(
                     reply_markup=keyboards.transaction_editor(transaction),
                 )
                 return True
-            token = secrets.token_hex(4)
-            await state.update_data({PENDING_EDIT_KEY: _pending(token, transaction.id, changes)})
-            preview = views.change_preview(transaction, changes, tz)
-            await message.answer(
-                views.transaction_card(transaction, tz, title=f"✏️ ¿Aplico este cambio?\n{preview}"),
-                reply_markup=_confirm_keyboard(token),
-            )
+            await edits.propose(message, transaction, changes, state, tz)
             return True
 
         case Intent.WORKOUT:
@@ -175,7 +160,13 @@ async def _act(
 
 
 async def _changes(
-    changes: Changes | None, text: str, today: date, finance: FinanceService, user: User
+    changes: Changes | None,
+    transaction: Transaction,
+    text: str,
+    today: date,
+    finance: FinanceService,
+    user: User,
+    settings: Settings,
 ) -> list[Change] | None:
     """Validated changes, ``[]`` when none were asked, ``None`` if any value is invalid."""
     if changes is None:
@@ -194,82 +185,28 @@ async def _changes(
         if category is None:
             return None
         result.append(CategoryChange(category))
-    if changes.day is not None:
-        day = validation.safe_day(changes.day, today)
-        if day is None:
+    if changes.day is not None or changes.time is not None:
+        # Only a time ("a las 10") keeps the movement's day.
+        current_day = transaction.occurred_at.astimezone(settings.tz).date()
+        day = validation.safe_day(changes.day, today) if changes.day else current_day
+        at = validation.safe_time(changes.time)
+        if day is None or (changes.time is not None and at is None):
             return None
-        result.append(DayChange(day))
+        result.append(DayChange(day, at))
+    if changes.account is not None:
+        account = await finance.find_account(user, changes.account)
+        if account is None:
+            return None
+        result.append(AccountChange(account))
     if changes.description is not None and changes.description.strip():
         result.append(DescriptionChange(" ".join(changes.description.split())))
     return result
-
-
-def _pending(token: str, transaction_id: int, changes: list[Change]) -> dict[str, Any]:
-    pending: dict[str, Any] = {"token": token, "tx_id": transaction_id}
-    for change in changes:
-        match change:
-            case AmountChange(cents):
-                pending["amount_cents"] = cents
-            case CategoryChange(category):
-                pending["category_id"] = category.id
-            case DayChange(day):
-                pending["day"] = day.isoformat()
-            case DescriptionChange(description):
-                pending["description"] = description
-    return pending
-
-
-def _confirm_keyboard(token: str) -> InlineKeyboardMarkup:
-    builder = InlineKeyboardBuilder()
-    builder.button(text="✅ Aplicar", callback_data=AiEditCallback(apply=True, token=token))
-    builder.button(text="✖️ Cancelar", callback_data=AiEditCallback(apply=False, token=token))
-    return builder.as_markup()
 
 
 def _target_text(target: Target | None) -> str:
     if target is None:
         return ""
     return " ".join(part for part in (target.description, target.amount, target.day) if part)
-
-
-async def resolve_edit(
-    callback: CallbackQuery,
-    callback_data: AiEditCallback,
-    state: FSMContext,
-    bot: Bot,
-    finance: FinanceService,
-    user: User,
-    settings: Settings,
-) -> None:
-    data = await state.get_data()
-    pending = data.get(PENDING_EDIT_KEY)
-    await state.update_data({PENDING_EDIT_KEY: None})
-    if not pending or pending.get("token") != callback_data.token:
-        await callback.answer("Este cambio ya no está disponible.", show_alert=True)
-        return
-    if not callback_data.apply:
-        await edit_or_send(callback, bot, "👌 Cambio descartado.", None)
-        await callback.answer()
-        return
-
-    transaction_id = int(pending["tx_id"])
-    if "amount_cents" in pending:
-        await finance.change_amount(user, transaction_id, int(pending["amount_cents"]))
-    if "category_id" in pending:
-        await finance.change_category(user, transaction_id, int(pending["category_id"]))
-    if "day" in pending:
-        await finance.change_day(user, transaction_id, date.fromisoformat(pending["day"]))
-    if "description" in pending:
-        await finance.change_description(user, transaction_id, str(pending["description"]))
-
-    transaction = await finance.get(user, transaction_id)
-    await edit_or_send(
-        callback,
-        bot,
-        views.transaction_card(transaction, settings.tz, title="✏️ Movimiento actualizado"),
-        keyboards.transaction_actions(transaction_id),
-    )
-    await callback.answer("Cambios aplicados")
 
 
 async def show_usage(
@@ -323,5 +260,4 @@ def _duration(seconds: int) -> str:
 def build_router() -> Router:
     router = Router(name="assistant")
     router.message.register(show_usage, Command("ia"))
-    router.callback_query.register(resolve_edit, AiEditCallback.filter())
     return router
