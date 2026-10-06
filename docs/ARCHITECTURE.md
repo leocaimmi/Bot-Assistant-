@@ -264,9 +264,11 @@ Un loop corre junto al long polling y cada 20 segundos busca los recordatorios v
 
 1. Crear un servicio desde el repositorio de GitHub; Railway detecta `railway.json` y
    construye con el `Dockerfile`.
-2. Agregar un **Volume** montado en `/data`. Sin volumen, los datos se pierden en cada deploy.
+2. Agregar un **Volume** (clic derecho en el lienzo del proyecto → *Volume*) en el servicio,
+   montado en `/data`. Sin volumen, los datos se pierden en cada deploy.
 3. Variables del servicio: `BOT_TOKEN`, `ALLOWED_USER_IDS` y, para la IA y los audios,
-   `OPENAI_API_KEY`. La imagen ya usa `/data/asistente.db` como base.
+   `OPENAI_API_KEY`. Sin `DATABASE_URL`: la imagen ya usa `/data/asistente.db`, y el
+   entrypoint corta con un mensaje claro si recibe una ruta relativa.
 4. Activar los backups automáticos del volumen.
 
 Al arrancar, el contenedor:
