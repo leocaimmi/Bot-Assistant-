@@ -13,6 +13,7 @@ from asistente.core.errors import UserError
 from asistente.core.money import MAX_AMOUNT_CENTS, parse_amount
 from asistente.core.text import normalize
 from asistente.finance.commands import TargetQuery, parse_target
+from asistente.finance.defaults import RECEIVED_TRANSFERS, SENT_TRANSFERS
 from asistente.finance.matching import find_phrase
 from asistente.finance.models import (
     MAX_DESCRIPTION_LENGTH,
@@ -314,12 +315,24 @@ class FinanceService:
         match = find_phrase(words, by_keyword)
         if match is not None:
             return match.value
+        # A transfer goes either way: "me transfirieron" is received, while "hice una
+        # transferencia" or "le transferí" is sent.
+        if kind is not None and _mentions_transfer(words):
+            name = SENT_TRANSFERS if kind is TransactionKind.EXPENSE else RECEIVED_TRANSFERS
+            categories = await self._repository.categories(user.id, kind)
+            transfers = next((c for c in categories if c.name == name), None)
+            if transfers is not None:
+                return transfers
 
         fallback_kind = kind or TransactionKind.EXPENSE
         fallback = await self._repository.fallback_category(user.id, fallback_kind)
         if fallback is None:
             raise FinanceNotReadyError(f"user {user.id} has no {fallback_kind} fallback")
         return fallback
+
+
+def _mentions_transfer(words: list[str]) -> bool:
+    return any(normalize(word).startswith("transf") for word in words)
 
 
 def _clean_description(text: str) -> str:

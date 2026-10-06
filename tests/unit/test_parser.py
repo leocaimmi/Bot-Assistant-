@@ -57,6 +57,22 @@ def test_drops_symbol_only_words() -> None:
 
 
 @pytest.mark.parametrize(
+    ("text", "kind"),
+    [
+        ("recibí transferencia de juan 5000", TransactionKind.INCOME),
+        ("me pagaron 50.000", TransactionKind.INCOME),
+        ("hice una transferencia a juan 5000", TransactionKind.EXPENSE),
+        ("le transferí 5000 a juan", TransactionKind.EXPENSE),
+        ("transferencia utn 200.000", None),
+        ("pagué lo que me pagaron 5000", None),
+        ("+ 5000 pagué", TransactionKind.INCOME),
+    ],
+)
+def test_words_say_which_way_the_money_went(text: str, kind: TransactionKind | None) -> None:
+    assert parse_entry(text, today=TODAY).kind is kind
+
+
+@pytest.mark.parametrize(
     ("text", "words"),
     [
         ("Uber, 2000.", ("Uber",)),
