@@ -135,6 +135,10 @@ class FinanceService:
 
     async def register_entry(self, user: User, entry: ParsedEntry, *, now: datetime) -> Transaction:
         """Create a transaction from already parsed parts (amount, words, kind, day)."""
+        return await self.save(await self.prepare_entry(user, entry, now=now))
+
+    async def prepare_entry(self, user: User, entry: ParsedEntry, *, now: datetime) -> Transaction:
+        """The transaction ``entry`` describes, with account and category, not saved yet."""
         local_now = now.astimezone(self._tz)
         words = list(entry.words)
 
@@ -145,7 +149,7 @@ class FinanceService:
             if entry.day is None or entry.day == local_now.date()
             else at_local_time(entry.day, local_now.time(), self._tz)
         )
-        transaction = Transaction(
+        return Transaction(
             user_id=user.id,
             account=account,
             category=category,
@@ -154,6 +158,8 @@ class FinanceService:
             description=_clean_description(" ".join(words)),
             occurred_at=occurred_at,
         )
+
+    async def save(self, transaction: Transaction) -> Transaction:
         return await self._repository.add_transaction(transaction)
 
     async def find_by_text(self, user: User, text: str, *, today: date) -> Transaction:

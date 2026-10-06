@@ -161,6 +161,13 @@ class RecurringPayment(TimestampMixin, Base):
 
     def label(self, number: int) -> str:
         """Description of charge ``number``: "zapatillas (2/9)" or the fixed description."""
-        if self.installments is None:
-            return self.description
-        return f"{self.description} ({number}/{self.installments})".strip()
+        return installment_label(self.description, number, self.installments)
+
+
+def installment_label(description: str, number: int, installments: int | None) -> str:
+    """``zapatillas (2/9)``, always within the description length limit."""
+    if installments is None:
+        return description
+    suffix = f"({number}/{installments})"
+    base = description[: MAX_DESCRIPTION_LENGTH - len(suffix) - 1].rstrip()
+    return f"{base} {suffix}" if base else suffix
