@@ -4,6 +4,7 @@ from tests.harness import BotHarness
 
 TOPICS = [
     ("Gastos e ingresos", "/resumen"),
+    ("Cuotas y fijos", "/fijos"),
     ("Gimnasio", "/entreno"),
     ("Corregir y borrar", "borrar el último"),
     ("Recordatorios", "/recordatorios"),
