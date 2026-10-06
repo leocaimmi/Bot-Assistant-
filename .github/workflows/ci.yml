@@ -40,6 +40,34 @@ jobs:
       - name: Test
         run: uv run pytest
 
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: docker build --tag asistente:ci .
+
+      - name: Runs as an unprivileged user
+        run: |
+          docker volume create asistente-data
+          uid=$(docker run --rm -v asistente-data:/data asistente:ci id -u)
+          test "$uid" != "0"
+
+      - name: Applies migrations to the volume
+        run: docker run --rm -v asistente-data:/data asistente:ci alembic current | grep "(head)"
+
+      - name: Refuses to start without configuration
+        run: |
+          if docker run --rm -v asistente-data:/data asistente:ci > run.log 2>&1; then
+            echo "The bot started without BOT_TOKEN" && exit 1
+          fi
+          grep "Invalid configuration" run.log
+
   secrets:
     name: Secret scan
     runs-on: ubuntu-latest

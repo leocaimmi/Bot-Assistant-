@@ -1,0 +1,16 @@
+# Only what the image needs goes into the build context (and never any secret).
+.git
+.github
+.claude
+.venv
+.env
+.env.*
+data
+docs
+tests
+*.db
+*.db-*
+**/__pycache__
+.mypy_cache
+.pytest_cache
+.ruff_cache
