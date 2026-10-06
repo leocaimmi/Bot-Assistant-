@@ -42,6 +42,8 @@ def test_groups_expenses_by_category_and_income_by_account() -> None:
         Detail("sube", 1_500_000),
         Detail("didi", 500_000),
     )
+    assert transport.hidden == 1  # remis
+    assert summary.expenses[1].hidden == 0
     assert [(g.name, g.cents) for g in summary.incomes] == [("Mercado Pago", 20_000_000)]
     assert summary.expense_total == 10_300_000
     assert summary.income_total == 20_000_000
