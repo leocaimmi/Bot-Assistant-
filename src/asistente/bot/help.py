@@ -10,7 +10,10 @@ Mandá un mensaje con el gasto o el ingreso:
 • <code>nafta 30k ayer</code>: con fecha (<code>ayer</code>, <code>15/09</code>)
 • <code>+ 50000 venta bici</code>: el <code>+</code> fuerza ingreso y el <code>-</code> gasto
 
-Después tocá los botones para cambiar categoría, importe, fecha o borrarlo.
+Después tocá los botones para cambiar categoría, importe, fecha o borrarlo, o escribí:
+• <code>borrar uber 2000</code> o <code>borrar el último</code>: lo borra (con confirmación)
+• <code>cambiar uber 2000 a 2500</code>, <code>cambiar uber a comida</code>: lo corrige
+• <code>cambiar uber 2000</code>: muestra los botones para editarlo
 /movimientos [mes]: lista para ver o editar movimientos
 /resumen [mes]: cuánto gastaste por categoría y cuánto ingresaste por cuenta
 /categorias: categorías y las palabras que las eligen

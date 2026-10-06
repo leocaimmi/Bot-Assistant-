@@ -16,6 +16,9 @@ rutina del gimnasio, escribiendo mensajes como `uber 2000` o `gym 47.000`.
 | `super 15.430,50 efectivo` | Gasto en 🛒 Supermercado pagado en Efectivo |
 | `nafta 30k ayer` | Gasto de $30.000 con fecha de ayer |
 | `+ 50000 venta bici` | El `+` fuerza ingreso; el `-` fuerza gasto |
+| `eliminar uber 2000` / `borrar el último` | Busca el movimiento y pide confirmación para borrarlo |
+| `cambiar uber 2000 a 2500` | Corrige el importe (también `a comida` o `a ayer`) |
+| `cambiar uber 2000` | Muestra los botones para editarlo |
 | `/movimientos [mes]` | Lista paginada; tocá un número para editarlo o borrarlo |
 | `/resumen [mes]` | Gastos por categoría (con detalle: uber, sube...), ingresos por cuenta y balance |
 | `/categorias` | Categorías y las palabras que las eligen |

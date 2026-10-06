@@ -1,7 +1,8 @@
-"""Plain-text messages: figure out whether they are a workout or a money movement.
+"""Plain-text messages: a command, a workout or a money movement.
 
-Rules only, no external calls: a message with sets x reps is a workout ("pecho: banco
-plano 4x12"); anything with an amount is a transaction ("uber 2000").
+Rules only, no external calls, in this order: a leading verb is a command ("borrar uber
+2000"); sets x reps is a workout ("pecho: banco plano 4x12"); anything with an amount is a
+transaction ("uber 2000").
 """
 
 from aiogram import F, Router
@@ -10,8 +11,10 @@ from aiogram.types import Message
 
 from asistente.bot.handlers import gym as gym_handlers
 from asistente.bot.handlers.finance import entries as finance_entries
+from asistente.bot.handlers.finance import text_commands
 from asistente.bot.handlers.gym import views as gym_views
 from asistente.config import Settings
+from asistente.finance.commands import parse_command
 from asistente.finance.parser import MissingAmountError
 from asistente.finance.service import FinanceService
 from asistente.gym.parser import looks_like_workout, parse_workout
@@ -33,7 +36,12 @@ async def handle_free_text(
     text = message.text or ""
     today = message.date.astimezone(settings.tz).date()
 
-    # Workouts first: "banco plano 4x12 60" must not become a $60 expense.
+    # Commands first: "borrar uber 2000" must not register a new expense.
+    if (command := parse_command(text)) is not None:
+        await text_commands.handle_command(message, command, finance, user, settings.tz)
+        return
+
+    # Then workouts: "banco plano 4x12 60" must not become a $60 expense.
     if (workout := parse_workout(text, today)) is not None:
         logged = await gym.log(user, workout.items, day=workout.day or today)
         await gym_handlers.answer_logged(message, logged, today)

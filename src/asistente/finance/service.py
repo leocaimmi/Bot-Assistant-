@@ -2,14 +2,17 @@
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from html import escape
 from math import ceil
 from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from asistente.core.dates import at_local_time, month_range
+from asistente.core.dates import at_local_time, month_range, parse_day
 from asistente.core.errors import UserError
-from asistente.core.money import MAX_AMOUNT_CENTS
+from asistente.core.money import MAX_AMOUNT_CENTS, parse_amount
+from asistente.core.text import normalize
+from asistente.finance.commands import TargetQuery, parse_target
 from asistente.finance.matching import find_phrase
 from asistente.finance.models import (
     MAX_DESCRIPTION_LENGTH,
@@ -24,6 +27,23 @@ from asistente.finance.repository import FinanceRepository
 from asistente.users.models import User
 
 PAGE_SIZE = 10
+# Text commands ("borrar uber 2000") look among this many most recent transactions.
+SEARCH_WINDOW = 300
+
+
+class MissingTargetError(UserError):
+    def __init__(self) -> None:
+        super().__init__(
+            "Decime cuál, por ejemplo <code>borrar uber 2000</code> "
+            "o <code>borrar el último</code>."
+        )
+
+
+class NoMatchingTransactionError(UserError):
+    def __init__(self, text: str) -> None:
+        super().__init__(
+            f"🤔 No encontré un movimiento que coincida con «{escape(text)}». Mirá /movimientos."
+        )
 
 
 class TransactionNotFoundError(UserError):
@@ -48,6 +68,24 @@ class InvalidAmountError(UserError):
 
 class FinanceNotReadyError(RuntimeError):
     """The user has no accounts or fallback categories (defaults were not seeded)."""
+
+
+@dataclass(frozen=True, slots=True)
+class AmountChange:
+    cents: int
+
+
+@dataclass(frozen=True, slots=True)
+class CategoryChange:
+    category: Category
+
+
+@dataclass(frozen=True, slots=True)
+class DayChange:
+    day: date
+
+
+Change = AmountChange | CategoryChange | DayChange
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,6 +139,38 @@ class FinanceService:
             occurred_at=occurred_at,
         )
         return await self._repository.add_transaction(transaction)
+
+    async def find_by_text(self, user: User, text: str, *, today: date) -> Transaction:
+        """Most recent transaction matching ``"uber 2000"``, ``"uber ayer"`` or ``"el último"``."""
+        query = parse_target(text, today)
+        if query.is_empty:
+            raise MissingTargetError
+        recent = await self._repository.transactions(user.id, limit=SEARCH_WINDOW)
+        match = next((tx for tx in recent if self._matches(tx, query)), None)
+        if match is None:
+            raise NoMatchingTransactionError(text)
+        return match
+
+    async def resolve_change(self, user: User, text: str, *, today: date) -> Change | None:
+        """What ``"2500"``, ``"comida"`` or ``"ayer"`` would change; ``None`` if nothing."""
+        try:
+            return AmountChange(parse_amount(text))
+        except ValueError:
+            pass
+        if (day := parse_day(text, today)) is not None:
+            return DayChange(day)
+        categories = {normalize(c.name): c for c in await self._repository.categories(user.id)}
+        category = categories.get(normalize(text))
+        return CategoryChange(category) if category is not None else None
+
+    async def apply_change(self, user: User, transaction_id: int, change: Change) -> Transaction:
+        match change:
+            case AmountChange(cents):
+                return await self.change_amount(user, transaction_id, cents)
+            case CategoryChange(category):
+                return await self.change_category(user, transaction_id, category.id)
+            case DayChange(day):
+                return await self.change_day(user, transaction_id, day)
 
     async def get(self, user: User, transaction_id: int) -> Transaction:
         transaction = await self._repository.transaction(user.id, transaction_id)
@@ -195,6 +265,18 @@ class FinanceService:
     async def delete(self, user: User, transaction_id: int) -> None:
         transaction = await self.get(user, transaction_id)
         await self._repository.delete_transaction(transaction)
+
+    def _matches(self, transaction: Transaction, query: TargetQuery) -> bool:
+        if query.amount_cents is not None and transaction.amount_cents != query.amount_cents:
+            return False
+        if query.day is not None and transaction.occurred_at.astimezone(self._tz).date() != (
+            query.day
+        ):
+            return False
+        searchable = set(
+            normalize(f"{transaction.description} {transaction.category.name}").split()
+        )
+        return all(word in searchable for word in query.words)
 
     async def _take_account(self, user: User, words: list[str]) -> Account:
         """Account named in the message (its words are removed) or the default one."""
