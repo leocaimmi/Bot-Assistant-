@@ -138,7 +138,7 @@ Copiá `.env.example` a `.env` y completalo. `.env` está en `.gitignore`: nunca
 | -------- | ----------- | ----------- |
 | `BOT_TOKEN` | Sí | Token de @BotFather |
 | `ALLOWED_USER_IDS` | Sí | IDs de Telegram autorizados, separados por coma. El resto se ignora en silencio |
-| `DATABASE_URL` | No | Por defecto `./data/asistente.db` en local y `/data/asistente.db` (el volumen) en Docker |
+| `DATABASE_URL` | No | Solo en tu computadora (por defecto `./data/asistente.db`). **No la cargues en Railway**: la imagen usa `/data/asistente.db` (el volumen) |
 | `TIMEZONE` | No | Por defecto `America/Argentina/Buenos_Aires` |
 | `LOG_LEVEL` | No | `DEBUG`, `INFO` (por defecto), `WARNING` o `ERROR` |
 | `OPENAI_API_KEY` | No | Activa la IA para mensajes libres y audios. Sin key, solo reglas |
@@ -173,10 +173,12 @@ docker compose up --build
 
 1. **New Project → Deploy from GitHub repo** y elegí este repositorio. Railway usa
    `railway.json` y construye con el `Dockerfile`.
-2. En el servicio: **Settings → Volumes → Add Volume** montado en `/data`.
-   Sin volumen, la base se borra en cada deploy.
+2. Creá el volumen: en el lienzo del proyecto, **clic derecho → Volume** (o `Ctrl+K` /
+   `⌘K` y escribí *volume*), elegí el servicio del bot y poné `/data` como *mount path*.
+   No está en *Settings*. Sin volumen, la base se borra en cada deploy.
 3. En **Variables** cargá `BOT_TOKEN` y `ALLOWED_USER_IDS` (y `OPENAI_API_KEY` si querés la
-   IA). La imagen ya guarda la base en `/data/asistente.db`, dentro del volumen.
+   IA). **No copies `DATABASE_URL`**: la imagen ya guarda la base en `/data/asistente.db`,
+   dentro del volumen, y si recibe la ruta local (`./data/...`) no arranca.
 4. Activá los backups automáticos del volumen.
 5. Dejá **una sola réplica**: los volúmenes no admiten más y Telegram solo permite un
    proceso haciendo polling por bot.
