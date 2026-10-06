@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from asistente.ai.interpreter import InterpreterError
-from asistente.ai.schema import Intent
+from asistente.ai.schema import Intent, ReminderRequest
 from asistente.bot.app import build_dispatcher
 from asistente.bot.handlers import assistant
 from asistente.bot.handlers.free_text import CORRECTION_HELP, NOT_UNDERSTOOD
@@ -218,6 +218,34 @@ async def test_logs_a_free_form_workout(
     assert "<b>Tríceps</b>" in ai_harness.last_reply
     async with session_factory() as session:
         assert len(list(await session.scalars(select(WorkoutEntry)))) == 2
+
+
+async def test_reminders_said_freely(
+    ai_harness: BotHarness, fake_interpreter: FakeInterpreter
+) -> None:
+    fake_interpreter.will_answer(
+        interpretation(
+            Intent.REMINDER,
+            reminder=ReminderRequest(text="sacar la pizza", when="en 20 minutos"),
+        ),
+        interpretation(
+            Intent.REMINDER,
+            reminder=ReminderRequest(text="turno con el dentista", when="mañana a las 16"),
+        ),
+        interpretation(
+            Intent.REMINDER,
+            reminder=ReminderRequest(text="algo", when="cuando pueda"),
+        ),
+    )
+
+    await ai_harness.send("avisame dentro de un ratito que saque la pizza")
+    assert "Te lo recuerdo:</b> Sacar la pizza" in ai_harness.last_reply
+
+    await ai_harness.send("mañana tengo turno con el dentista a las 16, no me dejes olvidar")
+    assert "📅 mañana a las 16:00" in ai_harness.last_reply
+
+    await ai_harness.send("recordame algo cuando pueda")  # a timing the parser rejects
+    assert "No entendí cuándo" in ai_harness.last_reply
 
 
 async def test_unknown_and_failures(

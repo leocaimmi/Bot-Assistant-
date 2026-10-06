@@ -10,6 +10,8 @@ Un bot de Telegram de uso personal (un solo usuario) para:
    (`uber 2000`, `gym 47.000`, `transferencia utn 200.000`), editarlos, listarlos y obtener
    un resumen mensual por categoría y por cuenta.
 2. **Gimnasio**: llevar la rutina: días entrenados, ejercicios, series × repeticiones y peso.
+3. **Recordatorios**: "recordame mañana a las 9...", una vez o periódicos, que llegan
+   como notificación de Telegram.
 
 ## Principios
 
@@ -25,17 +27,20 @@ Un bot de Telegram de uso personal (un solo usuario) para:
 
 | Fase | Rama | Estado |
 | ---- | ---- | ------ |
-| 0. Base del repositorio | `chore/project-setup` | Hecho, falta merge |
-| 1. Núcleo del bot | `feat/bot-core` | Hecho, falta merge |
-| 2. Finanzas: movimientos | `feat/finance-transactions` | Hecho, falta merge |
-| 3. Finanzas: resumen mensual | `feat/finance-reports` | Hecho, falta merge |
-| 4. Finanzas: categorías y palabras clave | `feat/finance-categories` | Hecho, falta merge |
-| 5. Gimnasio | `feat/gym-tracker` | Hecho, falta merge |
-| 6. Comandos de texto | `feat/text-commands` | Hecho, falta merge |
-| 7. IA para mensajes libres | `feat/ai-interpreter` | Hecho, falta merge |
-| 8. IA más barata (GPT-6 Luna) | `feat/gpt-6-luna` | Hecho, falta merge |
-| 9. Audios | `feat/voice-messages` | Hecho, falta merge |
-| 10. Mejoras | varias | Backlog |
+| 0. Base del repositorio | `chore/project-setup` | Hecho |
+| 1. Núcleo del bot | `feat/bot-core` | Hecho |
+| 2. Finanzas: movimientos | `feat/finance-transactions` | Hecho |
+| 3. Finanzas: resumen mensual | `feat/finance-reports` | Hecho |
+| 4. Finanzas: categorías y palabras clave | `feat/finance-categories` | Hecho |
+| 5. Gimnasio | `feat/gym-tracker` | Hecho |
+| 6. Comandos de texto | `feat/text-commands` | Hecho |
+| 7. IA para mensajes libres | `feat/ai-interpreter` | Hecho |
+| 8. IA más barata (GPT-6 Luna) | `feat/gpt-6-luna` | Hecho |
+| 9. Audios | `feat/voice-messages` | Hecho |
+| 10. Menú de ayuda por temas | `feat/help-menu` | Hecho, falta merge |
+| 11. Ediciones por voz y transferencias | `fix/voice-edits` | Hecho, falta merge |
+| 12. Recordatorios | `feat/reminders` | Hecho, falta merge |
+| 13. Mejoras | varias | Backlog |
 
 ### Fase 0: base del repositorio
 
@@ -133,7 +138,37 @@ reglas, y la IA solo si no lo entienden.
   descargarlos.
 - Cada audio cuenta en el tope diario y aparece en `/ia` con su duración y costo.
 
-### Fase 10: mejoras (backlog)
+### Fase 10: menú de ayuda
+
+`/start` y `/ayuda` muestran un menú corto con un botón por tema; cada tema es una tarjeta
+que entra en la pantalla del celular, con ejemplos que se copian con un toque. Un test
+verifica que todo comando del menú de Telegram esté explicado.
+
+### Fase 11: ediciones por voz y transferencias
+
+- Toda edición escrita o dictada muestra el antes → después y espera **Aplicar**.
+- Si no se dice cuál movimiento, es el último; se puede cambiar también la hora y la cuenta.
+- Los comandos largos o que las reglas no resuelven van a la IA (una consulta).
+- "hice una transferencia" o "le transferí" es un gasto (📤 Transferencias enviadas);
+  "recibí" o "me pagaron" es un ingreso.
+
+### Fase 12: recordatorios
+
+| Mensaje | Resultado |
+| ------- | --------- |
+| `recordame mañana a las 9 pagar la luz` | Una vez |
+| `recordame en 20 minutos sacar la ropa` | Dentro de un rato |
+| `recordame todos los lunes a las 12 la pastilla` | Cada semana (también días sueltos o de lunes a viernes) |
+| `recordame el 10 de cada mes pagar el alquiler` | Cada mes |
+| `recordame mañana a las 10 hora de España ...` | En otra zona horaria |
+| `/recordatorios` | Lista con botones para borrar |
+
+- Formato y hora argentinos; otra zona solo si se dice.
+- Un loop dentro del bot revisa cada 20 s y manda los que vencieron como mensaje
+  (notificación push de Telegram) con **✅ Listo** y **⏳ 10 min**. No usa la IA.
+- Las frases que las reglas no entienden las reescribe la IA y el parser las verifica.
+
+### Fase 13: mejoras (backlog)
 
 - Gastos recurrentes (por ejemplo, la cuota del gimnasio todos los meses).
 - Presupuestos por categoría con aviso al acercarse al límite.
@@ -141,7 +176,6 @@ reglas, y la IA solo si no lo entienden.
 - Registro de peso corporal.
 - Gráficos mensuales como imagen.
 - Movimientos en dólares.
-- Recordatorios.
 
 ## Cómo se va a usar
 
@@ -177,16 +211,16 @@ Fechas aceptadas: `hoy`, `ayer`, `anteayer`, `15/09`, `15/09/2026`.
 | "transferencia" | Se toma como ingreso | Según el ejemplo `transferencia utn 200.000`; con `-` adelante se fuerza gasto |
 | Gimnasio | `4x12` = 4 series de 12 | Así lo escribís vos: primero las series |
 | IA | Híbrida, `gpt-6-luna`, opcional | Lo simple con reglas (gratis e instantáneo); la IA solo para lo que las reglas no entienden, con salida validada y confirmación para editar o borrar. Luna es el modelo más barato con Structured Outputs |
+| Recordatorios | Un loop dentro del mismo proceso, cada 20 s, sobre SQLite | Sin servicios extra ni costo; cada envío es su propia transacción y nada se reintenta para siempre |
+| Zona horaria | Argentina salvo que se diga otra | Lo pidió el usuario; los periódicos siguen la hora de esa zona aunque cambie el horario de verano |
 | Audios | Transcribir con `gpt-4o-mini-transcribe` y seguir con las reglas | Es el modelo de transcripción más barato; Luna no acepta audio, y si las reglas entienden lo dictado no hace falta una segunda consulta |
 
 ## Flujo de trabajo con Git
 
 - Una rama por feature, nunca commits directos a `main`.
 - Conventional Commits en inglés (`feat:`, `fix:`, `chore:`, `docs:`, `test:`, `ci:`, `build:`).
-- Las ramas de código están apiladas porque cada una depende de la anterior:
-  `main` ← `chore/project-setup` ← `feat/bot-core` ← `feat/finance-transactions`
-  ← `feat/finance-reports` ← `feat/finance-categories` ← `feat/gym-tracker`
-  ← `feat/text-commands` ← `feat/ai-interpreter` ← `feat/gpt-6-luna`
-  ← `feat/voice-messages`.
-- Orden de merge a `main`: `docs/project-plan` (independiente) y después las ramas de
-  código en el orden de la cadena.
+- Las ramas están apiladas porque cada una depende de la anterior. Ya están en `main`
+  todas hasta `feat/voice-messages`; faltan, en orden: `feat/help-menu` ←
+  `fix/voice-edits` ← `feat/reminders`.
+- Se mergean con **Create a merge commit**: no reescribe los commits, así cada PR
+  siguiente muestra solo lo suyo.

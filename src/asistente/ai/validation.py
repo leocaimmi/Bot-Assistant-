@@ -5,9 +5,10 @@ the bot's own deterministic parsers, and an amount must exist in what the user w
 """
 
 import re
-from datetime import date, time
+from datetime import date, datetime, time
+from zoneinfo import ZoneInfo
 
-from asistente.ai.schema import ExerciseDone, Movement, Target
+from asistente.ai.schema import ExerciseDone, Movement, ReminderRequest, Target
 from asistente.core.dates import parse_day
 from asistente.core.money import find_amounts, parse_amount
 from asistente.core.text import normalize
@@ -17,6 +18,7 @@ from asistente.finance.parser import ParsedEntry
 from asistente.gym.models import MAX_EXERCISE_NAME_LENGTH
 from asistente.gym.parser import MAX_REPS, MAX_SETS, ExerciseItem
 from asistente.gym.units import parse_kg
+from asistente.reminders.parser import ParsedReminder, clean_text, parse_when
 
 MAX_MOVEMENTS = 5
 MAX_EXERCISES = 20
@@ -108,3 +110,18 @@ def to_exercise_items(exercises: list[ExerciseDone], message: str) -> list[Exerc
             )
         )
     return items or None
+
+
+def to_reminder(
+    request: ReminderRequest | None, now: datetime, tz: ZoneInfo
+) -> ParsedReminder | None:
+    """The reminder, if the bot's own parser understands the whole timing the AI wrote."""
+    if request is None:
+        return None
+    when = parse_when(request.when, now, tz)
+    text = clean_text(request.text)
+    if when is None or not text:
+        return None
+    return ParsedReminder(
+        text=text, schedule=when.schedule, first_run=when.first_run, timezone=when.timezone
+    )

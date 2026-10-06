@@ -8,6 +8,7 @@ class HelpTopic(StrEnum):
     FINANCE = "finance"
     GYM = "gym"
     EDIT = "edit"
+    REMINDERS = "reminders"
     AI = "ai"
 
 
@@ -16,6 +17,7 @@ TOPIC_BUTTONS = {
     HelpTopic.FINANCE: "💸 Gastos e ingresos",
     HelpTopic.GYM: "🏋️ Gimnasio",
     HelpTopic.EDIT: "✏️ Corregir y borrar",
+    HelpTopic.REMINDERS: "⏰ Recordatorios",
     HelpTopic.AI: "🤖 IA y audios",
 }
 
@@ -25,6 +27,7 @@ _MENU = """\
 <code>uber 2000</code> · anoto un gasto
 <code>transferencia utn 200.000</code> · un ingreso
 <code>pecho: banco plano 4x12 60kg</code> · un entrenamiento
+<code>recordame mañana a las 9 pagar la luz</code> · un recordatorio
 
 Tocá un tema para ver todo 👇
 /ayuda vuelve a este menú · /cancelar corta lo que estés haciendo"""
@@ -78,6 +81,19 @@ Cada movimiento trae botones para editarlo. También podés escribir:
 
 🏋️ Un entrenamiento se borra con <b>Deshacer</b> o desde /entreno."""
 
+_REMINDERS = """\
+⏰ <b>Recordatorios</b>
+Te llegan como notificación de Telegram, en hora argentina:
+<code>recordame mañana a las 9 pagar la luz</code>
+<code>recordame en 20 minutos sacar la ropa</code>
+<code>recordame el 15/10 a las 18:30 turno médico</code>
+<code>recordame todos los lunes a las 12 la pastilla</code>
+<code>recordame el 10 de cada mes pagar el alquiler</code>
+Otra zona horaria: <code>... a las 10 hora de España</code>
+
+Sin hora, te aviso a las 9. Cuando llega: ✅ Listo o ⏳ 10 min.
+/recordatorios · ver y borrar"""
+
 _AI = """\
 🤖 <b>IA y audios</b>
 Lo que las reglas no entienden lo interpreta la IA:
@@ -94,6 +110,7 @@ _TOPICS = {
     HelpTopic.FINANCE: _FINANCE,
     HelpTopic.GYM: _GYM,
     HelpTopic.EDIT: _EDIT,
+    HelpTopic.REMINDERS: _REMINDERS,
     HelpTopic.AI: _AI,
 }
 

@@ -1,6 +1,8 @@
 """Wires the bot together and runs it with long polling."""
 
+import asyncio
 import logging
+from contextlib import suppress
 
 import openai
 from aiogram import Bot, Dispatcher
@@ -22,6 +24,7 @@ from asistente.bot.handlers import (
     finance,
     free_text,
     gym,
+    reminders,
     voice,
 )
 from asistente.bot.middlewares import (
@@ -32,12 +35,14 @@ from asistente.bot.middlewares import (
     UserMiddleware,
     UserSetupHook,
 )
+from asistente.bot.reminder_sender import run_reminders
 from asistente.config import Settings
 from asistente.db.engine import create_engine, create_session_factory
 from asistente.finance.categories import CategoryService
 from asistente.finance.defaults import seed_defaults
 from asistente.finance.service import FinanceService
 from asistente.gym.service import GymService
+from asistente.reminders.service import ReminderService
 from asistente.users.service import UserService
 
 logger = logging.getLogger(__name__)
@@ -53,6 +58,7 @@ def build_services(session: AsyncSession, settings: Settings) -> dict[str, objec
         "category_service": CategoryService(session),
         "gym": GymService(session),
         "ai_usage": AiUsageService(session),
+        "reminders": ReminderService(session),
     }
 
 
@@ -83,6 +89,7 @@ def build_dispatcher(
         common.build_router(),
         finance.build_router(),
         gym.build_router(),
+        reminders.build_router(),
         assistant.build_router(),
         free_text.build_router(),  # plain text: commands, workouts, transactions, AI
         voice.build_router(),  # voice: transcribed, then handled like plain text
@@ -119,13 +126,19 @@ async def run_polling(settings: Settings) -> None:
         transcriber = OpenAITranscriber(openai_client, settings.openai_transcription_model)
     dispatcher = build_dispatcher(settings, session_factory, interpreter, transcriber)
     bot = build_bot(settings)
+    reminders_task: asyncio.Task[None] | None = None
     try:
         await set_up_existing_users(session_factory)
         await bot.delete_webhook(drop_pending_updates=False)
         await set_bot_commands(bot)
+        reminders_task = asyncio.create_task(run_reminders(bot, session_factory, settings.tz))
         logger.info("Bot started (long polling, AI %s)", "on" if openai_client else "off")
         await dispatcher.start_polling(bot, allowed_updates=dispatcher.resolve_used_update_types())
     finally:
+        if reminders_task is not None:
+            reminders_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await reminders_task
         if openai_client is not None:
             await openai_client.close()
         await engine.dispose()

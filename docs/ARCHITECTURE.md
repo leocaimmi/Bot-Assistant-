@@ -33,6 +33,10 @@ src/asistente/
 │   └── types.py           # UTCDateTime
 ├── users/                 # Dominio: usuarios
 ├── gym/                   # Dominio: gimnasio (modelos, parser 4x12, servicio)
+├── reminders/             # Dominio: recordatorios
+│   ├── schedule.py        # Una vez, diario, semanal o mensual: próxima ejecución
+│   ├── parser.py          # "recordame mañana a las 9..." → ParsedReminder
+│   └── service.py         # Crear, listar, posponer y encontrar los vencidos
 ├── ai/                    # IA opcional: intérprete, transcripción, precios, validación, uso
 ├── finance/               # Dominio: finanzas
 │   ├── models.py          # Account, Category, CategoryKeyword, Transaction
@@ -45,13 +49,15 @@ src/asistente/
 │   └── reports.py         # Resumen mensual
 └── bot/                   # Adaptador de Telegram
     ├── app.py             # Arma Bot + Dispatcher y arranca el polling
+    ├── reminder_sender.py # Loop que manda los recordatorios vencidos
     ├── commands.py        # Menú de comandos
     ├── errors.py          # Respuesta ante errores (sin detalles internos)
     ├── help.py            # Texto de /ayuda, una sección por módulo
     ├── ui.py              # Editar o enviar mensajes, cortar textos largos
     ├── middlewares/       # Acceso, sesión de DB, usuario, reseteo de pasos
     └── handlers/          # Un paquete por dominio (common, finance, gym, ...)
-        ├── free_text.py   # Ruteo del texto libre: comando, gimnasio, gasto o IA
+        ├── free_text.py   # Ruteo del texto: recordatorio, comando, gimnasio, gasto o IA
+        ├── reminders/     # Tarjetas, /recordatorios y botones Listo / 10 min
         ├── voice.py       # Audios: los transcribe y siguen el camino del texto
         └── assistant.py   # Ejecuta lo que interpreta la IA (validado y confirmado)
 migrations/                # Alembic
@@ -86,9 +92,13 @@ Cada update se procesa dentro de una única transacción: si el handler falla, s
 flowchart TD
     VZ[Audio de hasta 1 minuto] --> T[1 consulta de transcripción]
     T --> SH[Muestra lo que entendió]
-    SH --> C
-    M[Mensaje de texto] --> C{"¿Empieza con borrar/cambiar?"}
-    C -->|sí| TC[Comando de texto<br/>busca el movimiento]
+    SH --> RM
+    M[Mensaje de texto] --> RM{"¿Dice recordame?"}
+    RM -->|sí, se entiende cuándo| REM[Crea el recordatorio]
+    RM -->|sí, no se entiende| AI
+    RM -->|no| C{"¿Empieza con borrar/cambiar?"}
+    C -->|corto| TC[Comando de texto<br/>muestra el cambio y espera Aplicar]
+    C -->|largo o sin resolver| AI
     C -->|no| W{"¿Tiene series x reps<br/>en el formato?"}
     W -->|sí| G[Anota el entrenamiento]
     W -->|no| S{"¿Es un movimiento simple?<br/>uber 2000"}
@@ -164,7 +174,7 @@ erDiagram
 - Todas las consultas filtran por `user_id`: un `id` de movimiento ajeno, por ejemplo uno
   manipulado en un botón, no devuelve nada.
 
-## Modelo de datos (gimnasio e IA)
+## Modelo de datos (gimnasio, IA y recordatorios)
 
 ```mermaid
 erDiagram
@@ -173,6 +183,7 @@ erDiagram
     workouts ||--o{ workout_entries : contiene
     exercises ||--o{ workout_entries : "se hace en"
     users ||--o{ ai_usage : consume
+    users ||--o{ reminders : agenda
 
     exercises {
         int id PK
@@ -200,7 +211,32 @@ erDiagram
         int audio_seconds
         bigint cost_micro_usd "con el precio del momento"
     }
+    reminders {
+        int id PK
+        string text "hasta 200 caracteres"
+        string repeat "once | daily | weekly | monthly"
+        int minute_of_day "en la zona del recordatorio"
+        int weekdays "bits, lunes = 1"
+        int day_of_month "1-31"
+        string timezone "IANA"
+        datetime next_run_at "UTC, con índice"
+        bool active
+    }
 ```
+
+## Recordatorios
+
+Un loop corre junto al long polling y cada 20 segundos busca los recordatorios vencidos
+(índice por `active, next_run_at`), como mucho 50 por vuelta:
+
+- Cada uno se manda en su propia transacción y se marca como enviado recién cuando
+  Telegram lo acepta: un corte nunca pierde uno (como mucho, llega dos veces).
+- Si Telegram lo rechaza para siempre (bot bloqueado, chat inexistente) no se reintenta;
+  si falla por un rato (red, Telegram, base ocupada) queda para la vuelta siguiente; si
+  falla de forma inesperada se desactiva, así nunca traba a los demás.
+- Los periódicos pasan a su próxima fecha en su zona horaria, salteando las que se
+  perdieron mientras el bot estuvo apagado (no llegan todos juntos).
+- El mensaje es uno normal del bot, así que el celular muestra la notificación push.
 
 ## Seguridad
 
@@ -221,6 +257,8 @@ erDiagram
 | Audios | Solo notas de voz de hasta 1 minuto y 1 MB, rechazadas antes de descargarlas; lo transcripto pasa por las mismas reglas y validaciones que un mensaje escrito |
 | Privacidad con OpenAI | `store=false`, identificador de usuario hasheado, solo se envía el mensaje (o el audio) con categorías y nombres de ejercicios; el audio se procesa en memoria y no se guarda |
 | Inyección de prompt | El mensaje va delimitado y sin `<` `>`; la IA no tiene herramientas ni puede ejecutar acciones |
+| Recordatorios | Cada uno se manda solo a su dueño; hasta 30 activos (también al posponer) y 200 caracteres; el texto se escapa; ningún envío se reintenta para siempre y mandarlos no usa la IA |
+| Ediciones por texto o voz | Siempre muestran el antes → después y esperan **Aplicar**; el cambio pendiente queda en el servidor y el botón solo lleva un token al azar |
 
 ## Despliegue en Railway
 

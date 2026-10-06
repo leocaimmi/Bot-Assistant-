@@ -1,6 +1,8 @@
-"""Text messages, typed or transcribed: a command, a workout, a movement, or (last) the AI.
+"""Text messages, typed or transcribed: a reminder, a command, a workout, a movement, or
+(last) the AI.
 
-Free rules first, in this order: a leading verb is a command ("borrar uber 2000"); sets x
+Free rules first, in this order: "recordame..." is a reminder, even with an amount in it;
+a leading verb is a command ("borrar uber 2000"); sets x
 reps is a workout ("pecho: banco plano 4x12"); anything with an amount is a transaction
 ("uber 2000"). Only what the rules cannot handle goes to the AI, when it is configured.
 """
@@ -14,9 +16,11 @@ from asistente.ai.interpreter import Interpreter
 from asistente.ai.usage import AiUsageService, DailyBudget
 from asistente.bot.handlers import assistant
 from asistente.bot.handlers import gym as gym_handlers
+from asistente.bot.handlers import reminders as reminder_handlers
 from asistente.bot.handlers.finance import entries as finance_entries
 from asistente.bot.handlers.finance import text_commands
 from asistente.bot.handlers.gym import views as gym_views
+from asistente.bot.handlers.reminders import views as reminder_views
 from asistente.config import Settings
 from asistente.finance.commands import (
     TextCommand,
@@ -32,6 +36,8 @@ from asistente.finance.service import (
 )
 from asistente.gym.parser import looks_like_workout, parse_workout
 from asistente.gym.service import GymService
+from asistente.reminders.parser import is_reminder_request, mentions_reminders
+from asistente.reminders.service import ReminderService
 from asistente.users.models import User
 
 NOT_UNDERSTOOD = (
@@ -52,6 +58,7 @@ async def handle_free_text(
     finance: FinanceService,
     gym: GymService,
     ai_usage: AiUsageService,
+    reminders: ReminderService,
     user: User,
     settings: Settings,
     state: FSMContext,
@@ -63,6 +70,7 @@ async def handle_free_text(
         message.text or "",
         finance=finance,
         gym=gym,
+        reminders=reminders,
         ai_usage=ai_usage,
         user=user,
         settings=settings,
@@ -78,6 +86,7 @@ async def route_text(
     *,
     finance: FinanceService,
     gym: GymService,
+    reminders: ReminderService,
     ai_usage: AiUsageService,
     user: User,
     settings: Settings,
@@ -87,8 +96,21 @@ async def route_text(
 ) -> None:
     """Act on ``text`` and answer ``message`` (whose text may be a transcript)."""
     ai_on = interpreter is not None
-    # Commands first: "borrar uber 2000" must not register a new expense.
-    if (command := parse_command(text)) is not None:
+    command = parse_command(text)
+    if command is not None and mentions_reminders(text):
+        # "borrar el recordatorio de la pastilla": reminders have their own list.
+        await message.answer(reminder_views.USE_THE_LIST)
+        return
+    # Reminders: "recordame pagar 2000 de luz" is not an expense.
+    if is_reminder_request(text):
+        if await reminder_handlers.create_from_text(message, text, reminders, user, settings):
+            return
+        if not ai_on:
+            await message.answer(reminder_views.NOT_UNDERSTOOD)
+            return
+        # The rules could not read the timing: the AI does (below).
+    # Commands: "borrar uber 2000" must not register a new expense.
+    elif command is not None:
         if await _run_command(message, command, text, finance, user, settings, state, ai_on=ai_on):
             return
     elif await _run_rules(message, text, finance, gym, user, settings, ai_on=ai_on):
@@ -101,6 +123,7 @@ async def route_text(
         budget=ai_budget,
         finance=finance,
         gym=gym,
+        reminders=reminders,
         ai_usage=ai_usage,
         user=user,
         settings=settings,
@@ -167,6 +190,8 @@ async def _run_rules(
 
 
 def _help_for(text: str) -> str:
+    if is_reminder_request(text):
+        return reminder_views.NOT_UNDERSTOOD
     if looks_like_workout(text):
         return gym_views.WORKOUT_FORMAT_HELP
     if looks_like_correction(text):

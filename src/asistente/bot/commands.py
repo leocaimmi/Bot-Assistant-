@@ -7,6 +7,7 @@ BOT_COMMANDS = (
     BotCommand(command="ayuda", description="Todo lo que podés hacer"),
     BotCommand(command="resumen", description="Resumen del mes"),
     BotCommand(command="movimientos", description="Ver y editar movimientos"),
+    BotCommand(command="recordatorios", description="Tus recordatorios"),
     BotCommand(command="categorias", description="Categorías y palabras clave"),
     BotCommand(command="entreno", description="Entrenamiento de hoy (o de otro día)"),
     BotCommand(command="semana", description="Días entrenados esta semana"),

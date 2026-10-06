@@ -1,12 +1,14 @@
-from datetime import date
+from datetime import date, datetime
 
 import pytest
 
 from asistente.ai import validation
-from asistente.ai.schema import ExerciseDone
+from asistente.ai.schema import ExerciseDone, ReminderRequest
 from asistente.finance.models import TransactionKind
 from asistente.gym.models import MuscleGroup
+from asistente.reminders.schedule import Repeat
 from tests.ai_factories import exercise, movement, target
+from tests.factories import BUENOS_AIRES
 
 TODAY = date(2026, 10, 5)
 
@@ -107,3 +109,18 @@ def test_spelled_out_workout_has_no_numbers_to_check() -> None:
     items = validation.to_exercise_items([exercise("press", 4, 12)], "press cuatro de doce")
 
     assert items is not None
+
+
+def test_to_reminder_checks_the_timing_with_the_parser() -> None:
+    now = datetime(2026, 10, 5, 10, 0, tzinfo=BUENOS_AIRES)
+
+    def check(text: str, when: str) -> object:
+        return validation.to_reminder(ReminderRequest(text=text, when=when), now, BUENOS_AIRES)
+
+    parsed = check("la pastilla", "todos los lunes a las 12")
+    assert parsed is not None
+    assert parsed.schedule.repeat is Repeat.WEEKLY  # type: ignore[attr-defined]
+    assert check("algo", "cuando pueda") is None
+    assert check("algo", "mañana a las 9 y algo más") is None
+    assert check("  ", "mañana") is None
+    assert validation.to_reminder(None, now, BUENOS_AIRES) is None

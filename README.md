@@ -1,15 +1,16 @@
 # Bot Asistente
 
-Bot de Telegram personal para registrar gastos e ingresos en pesos argentinos y llevar la
-rutina del gimnasio, escribiendo (o dictando) mensajes como `uber 2000` o `gym 47.000`.
+Bot de Telegram personal para registrar gastos e ingresos en pesos argentinos, llevar la
+rutina del gimnasio y agendar recordatorios, escribiendo (o dictando) mensajes como
+`uber 2000`, `gym 47.000` o `recordame mañana a las 9 pagar la luz`.
 
 - Plan y fases: [docs/ROADMAP.md](docs/ROADMAP.md)
 - Arquitectura, modelo de datos y seguridad: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ## Uso
 
-En el bot, `/ayuda` abre un menú con un botón por tema (gastos, gimnasio, correcciones e IA)
-y ejemplos que se copian con un toque.
+En el bot, `/ayuda` abre un menú con un botón por tema (gastos, gimnasio, correcciones,
+recordatorios e IA) y ejemplos que se copian con un toque.
 
 | Mensaje | Resultado |
 | ------- | --------- |
@@ -20,7 +21,8 @@ y ejemplos que se copian con un toque.
 | `nafta 30k ayer` | Gasto de $30.000 con fecha de ayer |
 | `+ 50000 venta bici` | El `+` fuerza ingreso; el `-` fuerza gasto |
 | `eliminar uber 2000` / `borrar el último` | Busca el movimiento y pide confirmación para borrarlo |
-| `cambiar uber 2000 a 2500` | Corrige el importe (también `a comida` o `a ayer`) |
+| `cambiar uber 2000 a 2500` | Muestra el cambio y lo aplica cuando tocás **Aplicar** (también `a comida`, `a ayer` o `a efectivo`) |
+| `hice una transferencia a juan 5000` | Gasto en 📤 Transferencias enviadas (`recibí` o `me pagaron`: ingreso) |
 | `cambiar uber 2000` | Muestra los botones para editarlo |
 | `/movimientos [mes]` | Lista paginada; tocá un número para editarlo o borrarlo |
 | `/resumen [mes]` | Gastos por categoría (con detalle: uber, sube...), ingresos por cuenta y balance |
@@ -51,6 +53,29 @@ Primero las series y después las repeticiones; el peso es opcional.
 | `/ejercicios` | Tus ejercicios agrupados por músculo |
 
 Cada entrenamiento anotado trae un botón **Deshacer**.
+
+### Recordatorios
+
+En hora argentina, salvo que digas otra zona. Llegan como un mensaje del bot, así que el
+celular muestra la **notificación de Telegram** (si el chat no está silenciado).
+
+| Mensaje | Resultado |
+| ------- | --------- |
+| `recordame mañana a las 9 pagar la luz` | Una vez, mañana a las 9:00 |
+| `recordame en 20 minutos sacar la ropa` | Dentro de 20 minutos (también `en 2 horas`, `en 3 días`) |
+| `recordame el 15/10 a las 18:30 turno médico` | Ese día (también `el 15 de octubre`, `el viernes`, `el 15`) |
+| `recordame todos los lunes a las 12 la pastilla` | Cada lunes (también `los martes y jueves`, `de lunes a viernes`) |
+| `recordame todos los días a las 8 tomar agua` | Todos los días |
+| `recordame el 10 de cada mes pagar el alquiler` | Todos los meses (el 31 cae el último día en meses cortos) |
+| `recordame mañana a las 10 hora de España llamar a Pablo` | A las 10 de España, y te muestra qué hora es acá |
+| `/recordatorios` | Tus recordatorios, con botones para borrarlos |
+
+- Horas de 24 h o con `de la mañana`, `de la tarde`, `de la noche`; sin hora, a las 9.
+- Cuando llega: **✅ Listo** o **⏳ 10 min** para que te lo vuelva a recordar.
+- Si el bot estuvo apagado, al volver manda lo pendiente avisando la hora original, sin
+  repetir los que se perdieron de un recordatorio periódico.
+- Hasta 30 activos y 200 caracteres cada uno. Las frases que las reglas no entienden las
+  interpreta la IA (si está activada) y el bot verifica la fecha antes de crearlo.
 
 ### IA (opcional)
 
