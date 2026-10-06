@@ -58,6 +58,19 @@ async def test_installments_start_now_and_continue_monthly(
     assert payment.category.name == "Ropa"
 
 
+async def test_the_purchase_day_sets_the_monthly_day(
+    recurring: RecurringPaymentService, user: User
+) -> None:
+    registered = await _register(recurring, user, "zapatillas 10.000 cuota 1 de 9 15/08")
+
+    assert registered.transaction is not None and registered.payment is not None
+    assert registered.transaction.occurred_at.astimezone(BUENOS_AIRES).day == 15
+    assert registered.payment.day_of_month == 15
+    # The 2/9 of 15/09 already passed: it is due, so the scheduler registers it now.
+    assert registered.payment.next_run_at == _at(15, 9)
+    assert await recurring.due_ids(NOW) == [registered.payment.id]
+
+
 async def test_the_total_is_split_with_the_extra_cents_first(
     recurring: RecurringPaymentService, user: User
 ) -> None:

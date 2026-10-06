@@ -88,6 +88,8 @@ class RecurringPaymentService:
             user, replace(entry, amount_cents=first), now=now
         )
         description = prepared.description
+        # "zapatillas 10.000 cuota 1 de 9 ayer": the purchase day sets the monthly day.
+        paid_on = entry.day or local_now.date()
         starts_now = request.day_of_month in (None, local_now.day)
         transaction = None
         if starts_now:
@@ -96,14 +98,11 @@ class RecurringPaymentService:
         if last_one_now:
             return RegisteredRecurring(transaction, None)
 
-        day = request.day_of_month or local_now.day
+        day = request.day_of_month or paid_on.day
         schedule = Schedule(Repeat.MONTHLY, CHARGE_TIME, day_of_month=day)
-        # When today's charge was just registered, the next one is next month.
-        after = (
-            datetime.combine(local_now.date(), time.max, tzinfo=self._tz)
-            if starts_now
-            else local_now
-        )
+        # After the charge just registered, the next one is the following month. If that
+        # date already passed (a purchase from long ago), the scheduler catches up.
+        after = datetime.combine(paid_on, time.max, tzinfo=self._tz) if starts_now else local_now
         next_run = next_occurrence(schedule, after)
         if next_run is None:  # pragma: no cover - monthly schedules always run again
             return RegisteredRecurring(transaction, None)
