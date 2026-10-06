@@ -16,6 +16,7 @@ from asistente.ai.interpreter import Interpreter
 from asistente.ai.usage import AiUsageService, DailyBudget
 from asistente.bot.handlers import assistant
 from asistente.bot.handlers import gym as gym_handlers
+from asistente.bot.handlers import recurring as recurring_handlers
 from asistente.bot.handlers import reminders as reminder_handlers
 from asistente.bot.handlers.finance import entries as finance_entries
 from asistente.bot.handlers.finance import text_commands
@@ -29,6 +30,8 @@ from asistente.finance.commands import (
     parse_command,
 )
 from asistente.finance.parser import MissingAmountError, is_simple_entry
+from asistente.finance.recurring import parse_recurring
+from asistente.finance.recurring_service import RecurringPaymentService
 from asistente.finance.service import (
     FinanceService,
     MissingTargetError,
@@ -59,6 +62,7 @@ async def handle_free_text(
     gym: GymService,
     ai_usage: AiUsageService,
     reminders: ReminderService,
+    recurring: RecurringPaymentService,
     user: User,
     settings: Settings,
     state: FSMContext,
@@ -71,6 +75,7 @@ async def handle_free_text(
         finance=finance,
         gym=gym,
         reminders=reminders,
+        recurring=recurring,
         ai_usage=ai_usage,
         user=user,
         settings=settings,
@@ -87,6 +92,7 @@ async def route_text(
     finance: FinanceService,
     gym: GymService,
     reminders: ReminderService,
+    recurring: RecurringPaymentService,
     ai_usage: AiUsageService,
     user: User,
     settings: Settings,
@@ -113,7 +119,7 @@ async def route_text(
     elif command is not None:
         if await _run_command(message, command, text, finance, user, settings, state, ai_on=ai_on):
             return
-    elif await _run_rules(message, text, finance, gym, user, settings, ai_on=ai_on):
+    elif await _run_rules(message, text, finance, gym, recurring, user, settings, ai_on=ai_on):
         return
 
     if interpreter is not None and await assistant.interpret(
@@ -161,17 +167,23 @@ async def _run_rules(
     text: str,
     finance: FinanceService,
     gym: GymService,
+    recurring: RecurringPaymentService,
     user: User,
     settings: Settings,
     *,
     ai_on: bool,
 ) -> bool:
-    """A workout or a simple movement with the free rules; ``False`` if neither applies."""
+    """A workout or a movement with the free rules; ``False`` if none applies."""
     today = message.date.astimezone(settings.tz).date()
     # Workouts: "banco plano 4x12 60" must not become a $60 expense.
     if (workout := parse_workout(text, today)) is not None:
         logged = await gym.log(user, workout.items, day=workout.day or today)
         await gym_handlers.answer_logged(message, logged, today)
+        return True
+
+    # Installments and fixed payments: "zapatillas 10.000 cuota 1 de 9".
+    if (request := parse_recurring(text)) is not None:
+        await recurring_handlers.create(message, request, recurring, user, settings)
         return True
 
     # A plain amount is a transaction, unless it reads like a workout or a correction

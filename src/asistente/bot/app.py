@@ -24,6 +24,7 @@ from asistente.bot.handlers import (
     finance,
     free_text,
     gym,
+    recurring,
     reminders,
     voice,
 )
@@ -40,6 +41,7 @@ from asistente.config import Settings
 from asistente.db.engine import create_engine, create_session_factory
 from asistente.finance.categories import CategoryService
 from asistente.finance.defaults import seed_defaults
+from asistente.finance.recurring_service import RecurringPaymentService
 from asistente.finance.service import FinanceService
 from asistente.gym.service import GymService
 from asistente.reminders.service import ReminderService
@@ -59,6 +61,7 @@ def build_services(session: AsyncSession, settings: Settings) -> dict[str, objec
         "gym": GymService(session),
         "ai_usage": AiUsageService(session),
         "reminders": ReminderService(session),
+        "recurring": RecurringPaymentService(session, settings.tz),
     }
 
 
@@ -90,6 +93,7 @@ def build_dispatcher(
         finance.build_router(),
         gym.build_router(),
         reminders.build_router(),
+        recurring.build_router(),
         assistant.build_router(),
         free_text.build_router(),  # plain text: commands, workouts, transactions, AI
         voice.build_router(),  # voice: transcribed, then handled like plain text

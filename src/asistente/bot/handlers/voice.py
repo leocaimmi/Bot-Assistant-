@@ -20,6 +20,7 @@ from asistente.ai.usage import AiUsageService, DailyBudget
 from asistente.bot.handlers import free_text
 from asistente.config import Settings
 from asistente.core.errors import UserError
+from asistente.finance.recurring_service import RecurringPaymentService
 from asistente.finance.service import FinanceService
 from asistente.gym.service import GymService
 from asistente.reminders.service import ReminderService
@@ -46,6 +47,7 @@ async def handle_voice(
     gym: GymService,
     ai_usage: AiUsageService,
     reminders: ReminderService,
+    recurring: RecurringPaymentService,
     user: User,
     settings: Settings,
     state: FSMContext,
@@ -89,6 +91,7 @@ async def handle_voice(
             finance=finance,
             gym=gym,
             reminders=reminders,
+            recurring=recurring,
             ai_usage=ai_usage,
             user=user,
             settings=settings,

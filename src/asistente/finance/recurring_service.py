@@ -215,3 +215,17 @@ class RecurringPaymentService:
             .where(RecurringPayment.user_id == user.id, RecurringPayment.active.is_(True))
         )
         return await self._session.scalar(query) or 0
+
+
+def last_charge_at(payment: RecurringPayment, tz: ZoneInfo) -> datetime | None:
+    """When the last installment will be registered; ``None`` for a fixed payment."""
+    if payment.installments is None:
+        return None
+    schedule = Schedule(Repeat.MONTHLY, CHARGE_TIME, day_of_month=payment.day_of_month)
+    run = payment.next_run_at.astimezone(tz)
+    for _ in range(payment.installments - payment.next_number):  # at most MAX_INSTALLMENTS
+        following = next_occurrence(schedule, run)
+        if following is None:  # pragma: no cover - monthly schedules always run again
+            break
+        run = following
+    return run
