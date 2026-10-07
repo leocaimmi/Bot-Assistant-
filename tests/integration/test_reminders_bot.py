@@ -3,7 +3,9 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from asistente.bot.handlers.common import EXAMPLES_BUTTON
 from asistente.bot.handlers.reminders import views
+from asistente.bot.help import HelpTopic, help_text
 from asistente.finance.models import Transaction
 from asistente.reminders.models import Reminder
 from tests.ai_factories import FakeTranscriber
@@ -87,6 +89,7 @@ async def test_list_and_delete_from_the_list(
 ) -> None:
     await harness.send("/recordatorios")
     assert harness.last_reply == views.EMPTY_LIST
+    assert harness.button(EXAMPLES_BUTTON)
 
     await harness.send("recordame mañana a las 9 pagar la luz")
     await harness.send("recordame todos los lunes a las 10 hora de España la call")
@@ -102,3 +105,6 @@ async def test_list_and_delete_from_the_list(
 
     await harness.click(harness.button("🗑 1"))
     assert harness.last_reply == views.EMPTY_LIST
+
+    await harness.click(harness.button(EXAMPLES_BUTTON))
+    assert harness.last_reply == help_text(HelpTopic.REMINDERS, ai_enabled=False)

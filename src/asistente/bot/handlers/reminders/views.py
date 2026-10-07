@@ -23,9 +23,8 @@ NOT_UNDERSTOOD = (
 )
 USE_THE_LIST = "⏰ Para ver o borrar recordatorios usá /recordatorios."
 DELETED = "🗑 Recordatorio borrado."
-EMPTY_LIST = (
-    "⏰ No tenés recordatorios.\nCreá uno así: <code>recordame mañana a las 9 pagar la luz</code>"
-)
+# The examples are one tap away (a button), so the empty list stays short.
+EMPTY_LIST = "⏰ No tenés recordatorios."
 _LIST_TITLE_LENGTH = 60  # 30 reminders still fit in one message
 
 
