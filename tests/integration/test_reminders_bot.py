@@ -5,6 +5,7 @@ from asistente.bot.handlers.reminders import views
 from asistente.finance.models import Transaction
 from asistente.reminders.models import Reminder
 from tests.ai_factories import FakeTranscriber
+from tests.factories import MONDAY_NOON
 from tests.harness import BotHarness
 
 
@@ -16,7 +17,7 @@ async def _count(session_factory: async_sessionmaker[AsyncSession], model: type[
 async def test_creates_a_reminder_and_deletes_it(
     harness: BotHarness, session_factory: async_sessionmaker[AsyncSession]
 ) -> None:
-    await harness.send("recordame mañana a las 9 pagar la luz")
+    await harness.send("recordame mañana a las 9 pagar la luz", at=MONDAY_NOON)
 
     assert "⏰ <b>Te lo recuerdo:</b> Pagar la luz" in harness.last_reply
     assert "📅 mañana a las 9:00" in harness.last_reply

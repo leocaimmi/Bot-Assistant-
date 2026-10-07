@@ -16,7 +16,7 @@ from tests.ai_factories import (
     movement,
     target,
 )
-from tests.factories import make_settings
+from tests.factories import MONDAY_NOON, make_settings
 from tests.harness import BotHarness
 
 
@@ -241,7 +241,9 @@ async def test_reminders_said_freely(
     await ai_harness.send("avisame dentro de un ratito que saque la pizza")
     assert "Te lo recuerdo:</b> Sacar la pizza" in ai_harness.last_reply
 
-    await ai_harness.send("mañana tengo turno con el dentista a las 16, no me dejes olvidar")
+    await ai_harness.send(
+        "mañana tengo turno con el dentista a las 16, no me dejes olvidar", at=MONDAY_NOON
+    )
     assert "📅 mañana a las 16:00" in ai_harness.last_reply
 
     await ai_harness.send("recordame algo cuando pueda")  # a timing the parser rejects
