@@ -20,6 +20,7 @@ recordatorios e IA) y ejemplos que se copian con un toque.
 | `super 15.430,50 efectivo` | Gasto en 🛒 Supermercado pagado en Efectivo |
 | `nafta 30k ayer` | Gasto de $30.000 con fecha de ayer |
 | `+ 50000 venta bici` | El `+` fuerza ingreso; el `-` fuerza gasto |
+| `coca, doritos, alfajor 10.200` | Un gasto con 3 ítems (también separados por `;` o `+`) |
 | `eliminar uber 2000` / `borrar el último` | Busca el movimiento y pide confirmación para borrarlo |
 | `cambiar uber 2000 a 2500` | Muestra el cambio y lo aplica cuando tocás **Aplicar** (también `a comida`, `a ayer` o `a efectivo`) |
 | `hice una transferencia a juan 5000` | Gasto en 📤 Transferencias enviadas (`recibí` o `me pagaron`: ingreso) |
@@ -32,6 +33,12 @@ recordatorios e IA) y ejemplos que se copian con un toque.
 
 Cada movimiento registrado llega con botones para cambiar la categoría, el importe, la
 descripción, la fecha, la cuenta o el tipo, y para borrarlo (con confirmación).
+
+La descripción se guarda con la primera letra en mayúscula y el resto en minúscula
+(`uber` → `Uber`; las siglas como `YPF` quedan igual). Si un importe paga varias cosas,
+cada una es un ítem: la ficha los muestra uno por renglón y `/movimientos` y `/resumen`,
+separados por coma. Sin comas (`gasto 10.200 una coca Doritos picantes y un chocolate`)
+los separa la IA.
 
 Importes aceptados: `2000`, `2.000`, `1.500,50`, `2k`, `1,5k`, `200 mil`, `2 lucas`,
 `1 palo`. Fechas: `hoy`, `ayer`, `anteayer`, `15/09`, `15/09/2026`. Cuentas: `mp`,
@@ -71,6 +78,9 @@ celular muestra la **notificación de Telegram** (si el chat no está silenciado
 | `/recordatorios` | Tus recordatorios, con botones para borrarlos |
 
 - Horas de 24 h o con `de la mañana`, `de la tarde`, `de la noche`; sin hora, a las 9.
+- De madrugada (antes de las 5), `mañana` es el día que ya empezó: a la 1:30,
+  `recordame mañana a las 9` llega en unas horas, y la ficha muestra la fecha
+  (`hoy (mar 06/10) a las 9:00`).
 - Cuando llega: **✅ Listo** o **⏳ 10 min** para que te lo vuelva a recordar.
 - Si el bot estuvo apagado, al volver manda lo pendiente avisando la hora original, sin
   repetir los que se perdieron de un recordatorio periódico.

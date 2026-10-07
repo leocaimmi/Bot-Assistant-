@@ -42,6 +42,7 @@ src/asistente/
 │   ├── models.py          # Account, Category, CategoryKeyword, Transaction
 │   ├── defaults.py        # Categorías, palabras clave y cuentas iniciales
 │   ├── parser.py          # "uber 2000 ayer" → ParsedEntry
+│   ├── descriptions.py    # "una coca, doritos" → "Coca, Doritos" (ítems)
 │   ├── matching.py        # Búsqueda de palabras clave
 │   ├── repository.py      # Acceso a datos (consultas)
 │   ├── service.py         # Reglas de negocio de los movimientos
@@ -184,6 +185,9 @@ erDiagram
     }
 ```
 
+- La descripción se guarda como ítems separados por coma, cada uno con la primera letra
+  en mayúscula (`Coca, Doritos picantes`): buscar y agrupar en el resumen siguen
+  funcionando con texto plano, y la ficha muestra un ítem por renglón.
 - Los importes se guardan en **centavos enteros** y siempre positivos; el tipo
   (`expense`/`income`) define el signo.
 - Las fechas se guardan en **UTC**; los rangos de cada mes se calculan en hora de

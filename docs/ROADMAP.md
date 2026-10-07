@@ -43,6 +43,7 @@ Un bot de Telegram de uso personal (un solo usuario) para:
 | 13. Resumen legible y logs en hora local | `fix/summary-details`, `fix/log-timezone` | Hecho, falta merge |
 | 14. Cuotas y gastos fijos | `feat/recurring-payments` | Hecho, falta merge |
 | 15. Mejoras | varias | Backlog |
+| 16. Ajustes de uso | `fix/usability-adjustments` | Hecho, falta merge |
 
 ### Fase 0: base del repositorio
 
@@ -198,6 +199,16 @@ verifica que todo comando del menú de Telegram esté explicado.
 - Registro de peso corporal.
 - Gráficos mensuales como imagen.
 - Movimientos en dólares.
+
+### Fase 16: ajustes de uso
+
+- De madrugada (antes de las 5), "mañana" es el día que ya empezó: un recordatorio
+  creado a la 1:30 para "mañana a las 9" llegaba un día tarde. La ficha muestra la fecha.
+- `/fijos` y `/recordatorios` vacíos ya no muestran ejemplos: tienen un botón
+  **💡 Ver ejemplos** que abre la ayuda del tema.
+- Descripciones con la primera letra en mayúscula y separadas en ítems
+  (`coca, doritos, alfajor 10.200`); la ficha muestra un ítem por renglón y la IA separa
+  los que se escriben sin comas.
 
 ## Cómo se va a usar
 
