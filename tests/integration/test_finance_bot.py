@@ -25,6 +25,18 @@ async def test_registers_expense_from_plain_text(harness: BotHarness) -> None:
     harness.button("Categoría")
 
 
+async def test_several_items_get_a_line_each(harness: BotHarness) -> None:
+    await harness.send("una coca, Doritos picantes y un chocolate 10.200")
+
+    assert (
+        "📦 Otros gastos\n   • Coca\n   • Doritos picantes\n   • Chocolate\n📱 Mercado Pago"
+        in harness.last_reply
+    )
+
+    await harness.send("/movimientos")
+    assert "Coca, Doritos picantes, Chocolate" in harness.last_reply
+
+
 async def test_registers_income(harness: BotHarness) -> None:
     await harness.send("transferencia utn 200.000")
 

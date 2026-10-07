@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from asistente.core.dates import format_datetime, format_short_datetime, month_label
 from asistente.core.money import format_ars
 from asistente.finance.categories import KeywordAssignment
-from asistente.finance.descriptions import format_description
+from asistente.finance.descriptions import description_items, format_description
 from asistente.finance.models import Category, Transaction, TransactionKind
 from asistente.finance.reports import Group, MonthlySummary
 from asistente.finance.service import (
@@ -30,11 +30,14 @@ def registered_title(transaction: Transaction) -> str:
 def transaction_card(transaction: Transaction, tz: ZoneInfo, *, title: str | None = None) -> str:
     category = transaction.category
     account = transaction.account
-    detail = f" · {escape(transaction.description)}" if transaction.description else ""
+    # One item goes next to the category; several get a line each.
+    items = description_items(transaction.description)
+    detail = f" · {escape(items[0])}" if len(items) == 1 else ""
     lines = [
         f"{KIND_EMOJIS[transaction.kind]} <b>{format_ars(transaction.amount_cents)}</b>"
         f" · {KIND_LABELS[transaction.kind]}",
         f"{category.emoji} {escape(category.name)}{detail}",
+        *(f"   • {escape(item)}" for item in items if len(items) > 1),
         f"{account.emoji} {escape(account.name)}",
         f"📅 {format_datetime(transaction.occurred_at, tz)}",
         f"<i>#{transaction.id}</i>",
