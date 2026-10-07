@@ -42,6 +42,7 @@ _FINANCE = """\
 <code>transferencia utn 200.000</code> · ingreso
 <code>super 15.430,50 efectivo</code> · con cuenta
 <code>nafta 30k ayer</code> · con fecha
+<code>coca, doritos, alfajor 10.200</code> · varios ítems
 <code>+ 50000 venta bici</code> · fuerza ingreso (<code>-</code> fuerza gasto)
 
 <b>Ver</b>
