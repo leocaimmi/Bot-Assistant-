@@ -40,8 +40,8 @@ Un bot de Telegram de uso personal (un solo usuario) para:
 | 10. Menú de ayuda por temas | `feat/help-menu` | Hecho |
 | 11. Ediciones por voz y transferencias | `fix/voice-edits` | Hecho |
 | 12. Recordatorios | `feat/reminders` | Hecho |
-| 13. Resumen legible y logs en hora local | `fix/summary-details`, `fix/log-timezone` | Hecho, falta merge |
-| 14. Cuotas y gastos fijos | `feat/recurring-payments` | Hecho, falta merge |
+| 13. Resumen legible y logs en hora local | `fix/summary-details`, `fix/log-timezone` | Hecho |
+| 14. Cuotas y gastos fijos | `feat/recurring-payments` | Hecho |
 | 15. Mejoras | varias | Backlog |
 | 16. Ajustes de uso | `fix/usability-adjustments` | Hecho, falta merge |
 
@@ -253,8 +253,7 @@ Fechas aceptadas: `hoy`, `ayer`, `anteayer`, `15/09`, `15/09/2026`.
 
 - Una rama por feature, nunca commits directos a `main`.
 - Conventional Commits en inglés (`feat:`, `fix:`, `chore:`, `docs:`, `test:`, `ci:`, `build:`).
-- Las ramas están apiladas porque cada una depende de la anterior. Ya están en `main`
-  todas hasta `fix/docker-database-url`; faltan, en orden: `fix/summary-details` ←
-  `fix/log-timezone` ← `feat/recurring-payments`.
+- Cada rama sale de `main` actualizado; si una depende de otra que todavía no se
+  mergeó, se apila sobre ella y se mergean en orden.
 - Se mergean con **Create a merge commit**: no reescribe los commits, así cada PR
   siguiente muestra solo lo suyo.
