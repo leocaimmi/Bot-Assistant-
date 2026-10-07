@@ -12,7 +12,9 @@ A reminder starts with a verb ("recordame", "avisame"...). Its timing can be:
 - another time zone, only if said: "hora de España", "hora de Miami", "UTC-5".
 
 Whatever is left is what to remember. Without an hour it is 9:00. Days such as "mañana"
-count from the user's own date; the hour is in the time zone of the reminder.
+count from the user's own date; the hour is in the time zone of the reminder. Late at
+night (before ``NIGHT_ENDS``) "mañana" is the day that already started: at 1 AM the user
+has not slept yet, so "mañana a las 9" is in a few hours.
 """
 
 import re
@@ -25,6 +27,8 @@ from asistente.core.schedule import WEEKEND, WORKDAYS, Repeat, Schedule, next_oc
 from asistente.core.text import fold
 
 DEFAULT_TIME = time(9, 0)
+# Until this hour, "mañana" means the coming morning: the day that already started.
+NIGHT_ENDS = time(5, 0)
 # Longer messages are not read by the rules (a reminder is a sentence, not an essay).
 MAX_MESSAGE_LENGTH = 1000
 
@@ -178,6 +182,11 @@ class When:
     timezone: str
 
 
+def is_late_night(now: datetime, tz: ZoneInfo) -> bool:
+    """Between midnight and ``NIGHT_ENDS``, when "mañana" still means the coming morning."""
+    return now.astimezone(tz).time() < NIGHT_ENDS
+
+
 def is_reminder_request(text: str) -> bool:
     return _VERB.search(fold(text)) is not None
 
@@ -264,6 +273,7 @@ class _Parts:
     period: str | None = None  # manana, tarde, noche, madrugada or noon
     day: date | None = None
     monthly_day: int | None = None  # "el 15": the next 15th
+    night_tomorrow: bool = False  # "mañana" said late at night: the day already started
 
 
 def _read_when(message: _Message, now: datetime, tz: ZoneInfo) -> When:
@@ -273,7 +283,7 @@ def _read_when(message: _Message, now: datetime, tz: ZoneInfo) -> When:
     _take_delay(message, parts, today)
     _take_repetition(message, parts)
     _take_time(message, parts, today)
-    _take_day(message, parts, today)
+    _take_day(message, parts, today, night=is_late_night(now, tz))
     return _resolve(parts, now, zone)
 
 
@@ -363,11 +373,14 @@ def _take_time(message: _Message, parts: _Parts, today: date) -> None:
         _set_period(parts, match["period"] or "noon")
 
 
-def _take_day(message: _Message, parts: _Parts, today: date) -> None:
+def _take_day(message: _Message, parts: _Parts, today: date, *, night: bool) -> None:
+    tomorrow = today if night else today + timedelta(days=1)
     for _ in message.take(_AFTER_TOMORROW):
-        _set_day(parts, today + timedelta(days=2))
+        _set_day(parts, tomorrow + timedelta(days=1))
+        parts.night_tomorrow = night
     for _ in message.take(_TOMORROW):
-        _set_day(parts, today + timedelta(days=1))
+        _set_day(parts, tomorrow)
+        parts.night_tomorrow = night
     for _ in message.take(_TODAY):
         _set_day(parts, today)
     for match in message.take(_DATE):
@@ -408,7 +421,10 @@ def _resolve(parts: _Parts, now: datetime, zone: ZoneInfo) -> When:
     if parts.monthly_day is not None:
         return When(schedule, _next_day_of_month(parts.monthly_day, at, now, zone), zone.key)
     if parts.day is not None:
-        return When(schedule, datetime.combine(parts.day, at, tzinfo=zone), zone.key)
+        first_run = datetime.combine(parts.day, at, tzinfo=zone)
+        if parts.night_tomorrow and first_run <= now:  # "mañana a la 1" said at 1:30
+            first_run += timedelta(days=1)
+        return When(schedule, first_run, zone.key)
     if parts.clock is None and parts.period is None:
         raise _UnclearError  # no timing at all
     first_run = datetime.combine(now.astimezone(zone).date(), at, tzinfo=zone)

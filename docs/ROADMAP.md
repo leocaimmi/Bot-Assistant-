@@ -40,9 +40,10 @@ Un bot de Telegram de uso personal (un solo usuario) para:
 | 10. Menú de ayuda por temas | `feat/help-menu` | Hecho |
 | 11. Ediciones por voz y transferencias | `fix/voice-edits` | Hecho |
 | 12. Recordatorios | `feat/reminders` | Hecho |
-| 13. Resumen legible y logs en hora local | `fix/summary-details`, `fix/log-timezone` | Hecho, falta merge |
-| 14. Cuotas y gastos fijos | `feat/recurring-payments` | Hecho, falta merge |
+| 13. Resumen legible y logs en hora local | `fix/summary-details`, `fix/log-timezone` | Hecho |
+| 14. Cuotas y gastos fijos | `feat/recurring-payments` | Hecho |
 | 15. Mejoras | varias | Backlog |
+| 16. Ajustes de uso | `fix/usability-adjustments` | Hecho, falta merge |
 
 ### Fase 0: base del repositorio
 
@@ -199,6 +200,16 @@ verifica que todo comando del menú de Telegram esté explicado.
 - Gráficos mensuales como imagen.
 - Movimientos en dólares.
 
+### Fase 16: ajustes de uso
+
+- De madrugada (antes de las 5), "mañana" es el día que ya empezó: un recordatorio
+  creado a la 1:30 para "mañana a las 9" llegaba un día tarde. La ficha muestra la fecha.
+- `/fijos` y `/recordatorios` vacíos ya no muestran ejemplos: tienen un botón
+  **💡 Ver ejemplos** que abre la ayuda del tema.
+- Descripciones con la primera letra en mayúscula y separadas en ítems
+  (`coca, doritos, alfajor 10.200`); la ficha muestra un ítem por renglón y la IA separa
+  los que se escriben sin comas.
+
 ## Cómo se va a usar
 
 | Mensaje | Qué hace |
@@ -242,8 +253,7 @@ Fechas aceptadas: `hoy`, `ayer`, `anteayer`, `15/09`, `15/09/2026`.
 
 - Una rama por feature, nunca commits directos a `main`.
 - Conventional Commits en inglés (`feat:`, `fix:`, `chore:`, `docs:`, `test:`, `ci:`, `build:`).
-- Las ramas están apiladas porque cada una depende de la anterior. Ya están en `main`
-  todas hasta `fix/docker-database-url`; faltan, en orden: `fix/summary-details` ←
-  `fix/log-timezone` ← `feat/recurring-payments`.
+- Cada rama sale de `main` actualizado; si una depende de otra que todavía no se
+  mergeó, se apila sobre ella y se mergean en orden.
 - Se mergean con **Create a merge commit**: no reescribe los commits, así cada PR
   siguiente muestra solo lo suyo.

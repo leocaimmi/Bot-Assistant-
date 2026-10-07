@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 
 from asistente.core.schedule import WEEKEND, WORKDAYS, Repeat, Schedule
 from asistente.reminders.models import Reminder
+from asistente.reminders.parser import is_late_night
 
 WEEKDAYS_SHORT = ("lun", "mar", "mié", "jue", "vie", "sáb", "dom")
 _WEEKDAYS_PLURAL = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábados", "domingos")
@@ -22,15 +23,16 @@ NOT_UNDERSTOOD = (
 )
 USE_THE_LIST = "⏰ Para ver o borrar recordatorios usá /recordatorios."
 DELETED = "🗑 Recordatorio borrado."
-EMPTY_LIST = (
-    "⏰ No tenés recordatorios.\nCreá uno así: <code>recordame mañana a las 9 pagar la luz</code>"
-)
+# The examples are one tap away (a button), so the empty list stays short.
+EMPTY_LIST = "⏰ No tenés recordatorios."
 _LIST_TITLE_LENGTH = 60  # 30 reminders still fit in one message
 
 
 def created(reminder: Reminder, tz: ZoneInfo, *, now: datetime) -> str:
     today = now.astimezone(tz).date()
-    lines = [f"⏰ <b>Te lo recuerdo:</b> {title(reminder)}", when(reminder, today)]
+    # Late at night "hoy" and "mañana" are easy to misread: the date says which day it is.
+    dated = is_late_night(now, tz)
+    lines = [f"⏰ <b>Te lo recuerdo:</b> {title(reminder)}", when(reminder, today, dated=dated)]
     if (other := other_zone(reminder, tz, today)) is not None:
         lines.append(other)
     return "\n".join(lines)
@@ -73,12 +75,16 @@ def title(reminder: Reminder) -> str:
     return escape(reminder.text[:1].upper() + reminder.text[1:])
 
 
-def when(reminder: Reminder, today: date) -> str:
-    """``📅 mañana a las 9:00`` or ``🔁 todos los lunes a las 12:00 · próximo: hoy``."""
+def when(reminder: Reminder, today: date, *, dated: bool = False) -> str:
+    """``📅 mañana a las 9:00`` or ``🔁 todos los lunes a las 12:00 · próximo: hoy``.
+
+    ``dated`` adds the date to "hoy" and "mañana": ``📅 hoy (mar 06/10) a las 9:00``.
+    """
     run = reminder.next_run_at.astimezone(reminder.zone)
     if reminder.repeat is Repeat.ONCE:
-        return f"📅 {run_label(run, today)}"
-    return f"🔁 {schedule_label(reminder.schedule)} · próximo: {day_label(run.date(), today)}"
+        return f"📅 {run_label(run, today, dated=dated)}"
+    next_day = day_label(run.date(), today, dated=dated)
+    return f"🔁 {schedule_label(reminder.schedule)} · próximo: {next_day}"
 
 
 def other_zone(reminder: Reminder, tz: ZoneInfo, today: date) -> str | None:
@@ -89,16 +95,16 @@ def other_zone(reminder: Reminder, tz: ZoneInfo, today: date) -> str | None:
     return f"🌍 hora de {zone_label(reminder.timezone)} · acá: {here}"
 
 
-def run_label(run: datetime, today: date) -> str:
-    return f"{day_label(run.date(), today)} {at_label(run.time())}"
+def run_label(run: datetime, today: date, *, dated: bool = False) -> str:
+    return f"{day_label(run.date(), today, dated=dated)} {at_label(run.time())}"
 
 
-def day_label(day: date, today: date) -> str:
-    if day == today:
-        return "hoy"
-    if day == today + timedelta(days=1):
-        return "mañana"
-    label = f"el {WEEKDAYS_SHORT[day.weekday()]} {day:%d/%m}"
+def day_label(day: date, today: date, *, dated: bool = False) -> str:
+    """``hoy``, ``mañana`` or ``el mié 15/10``; ``dated`` gives ``hoy (lun 05/10)``."""
+    for name, offset in (("hoy", 0), ("mañana", 1)):
+        if day == today + timedelta(days=offset):
+            return f"{name} ({_short_date(day)})" if dated else name
+    label = f"el {_short_date(day)}"
     return label if day.year == today.year else f"{label}/{day.year}"
 
 
@@ -132,6 +138,10 @@ def zone_label(name: str) -> str:
         offset = name.removeprefix("Etc/GMT")
         return f"UTC{'-' if offset.startswith('+') else '+'}{offset[1:]}"
     return name.rsplit("/", 1)[-1].replace("_", " ")
+
+
+def _short_date(day: date) -> str:
+    return f"{WEEKDAYS_SHORT[day.weekday()]} {day:%d/%m}"
 
 
 def _join(words: Sequence[str]) -> str:

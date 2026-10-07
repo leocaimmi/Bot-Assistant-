@@ -20,9 +20,21 @@ async def test_registers_expense_from_plain_text(harness: BotHarness) -> None:
     reply = harness.last_reply
     assert "Gasto registrado" in reply
     assert "<b>$2.000</b>" in reply
-    assert "Transporte · uber" in reply
+    assert "Transporte · Uber" in reply
     assert "Mercado Pago" in reply
     harness.button("Categoría")
+
+
+async def test_several_items_get_a_line_each(harness: BotHarness) -> None:
+    await harness.send("una coca, Doritos picantes y un chocolate 10.200")
+
+    assert (
+        "📦 Otros gastos\n   • Coca\n   • Doritos picantes\n   • Chocolate\n📱 Mercado Pago"
+        in harness.last_reply
+    )
+
+    await harness.send("/movimientos")
+    assert "Coca, Doritos picantes, Chocolate" in harness.last_reply
 
 
 async def test_registers_income(harness: BotHarness) -> None:
@@ -51,7 +63,7 @@ async def test_change_category_with_buttons(harness: BotHarness) -> None:
     await harness.click(harness.button("Categoría"))
     await harness.click(harness.button("Gimnasio"))
 
-    assert "Gimnasio · uber" in harness.last_reply
+    assert "Gimnasio · Uber" in harness.last_reply
     assert "Categoría actualizada" in harness.alerts
 
 

@@ -3,7 +3,9 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from asistente.bot.handlers.common import EXAMPLES_BUTTON
 from asistente.bot.handlers.recurring import views
+from asistente.bot.help import HelpTopic, help_text
 from asistente.finance.models import RecurringPayment, Transaction
 from tests.ai_factories import FakeInterpreter
 from tests.factories import BUENOS_AIRES
@@ -22,7 +24,7 @@ async def test_installments_are_registered_by_the_rules(
 
     card, plan = ai_harness.replies[-2:]
     assert "Gasto registrado" in card
-    assert "zapatillas (1/9)" in card
+    assert "Zapatillas (1/9)" in card
     assert "🔁 <b>Cuotas: Zapatillas</b> · $10.000" in plan
     assert "Te anoto la 2/9 el" in plan
     assert "hasta la 9/9" in plan
@@ -52,17 +54,22 @@ async def test_fixed_payments_and_the_list(
     assert "2. <b>" not in harness.last_reply
     await harness.click(harness.button("🗑 1"))
     assert harness.last_reply == views.EMPTY_LIST
+    assert harness.button(EXAMPLES_BUTTON)
     assert await _count(session_factory, RecurringPayment) == 2  # kept, but cancelled
 
 
 async def test_the_last_installment(harness: BotHarness) -> None:
     await harness.send("zapatillas 10.000 cuota 9 de 9")
 
-    assert "zapatillas (9/9)" in harness.replies[-2]
+    assert "Zapatillas (9/9)" in harness.replies[-2]
     assert harness.last_reply == views.LAST_INSTALLMENT
 
 
-async def test_an_empty_list(harness: BotHarness) -> None:
+async def test_an_empty_list_offers_the_examples_in_a_button(harness: BotHarness) -> None:
     await harness.send("/fijos")
 
     assert harness.last_reply == views.EMPTY_LIST
+    assert "<code>" not in harness.last_reply
+
+    await harness.click(harness.button(EXAMPLES_BUTTON))
+    assert harness.last_reply == help_text(HelpTopic.RECURRING, ai_enabled=False)

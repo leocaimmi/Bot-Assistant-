@@ -48,6 +48,9 @@ jueves, de lunes a viernes, el 10 de cada mes, hora de España. No hour if none 
 Rules:
 - Never invent values that are not in the message. Unused fields: null or [].
 - Descriptions and exercise names: short, in the user's words, no amounts or dates.
+- One amount for several things: the description lists them separated by commas, \
+without articles or words like "gasto" ("gasto 10.200 una coca Doritos y un chocolate" \
+-> "coca, Doritos, chocolate").
 - Amounts: digits as written in Argentina (2000, 200.000, 1.500,50). Convert words: \
 "dos lucas" -> 2000, "un palo" -> 1000000.
 - Dates: copy "hoy", "ayer", "anteayer" or "dd/mm" exactly; null if not mentioned.

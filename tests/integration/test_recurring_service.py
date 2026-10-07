@@ -49,7 +49,7 @@ async def test_installments_start_now_and_continue_monthly(
     registered = await _register(recurring, user, "zapatillas 10.000 cuota 1 de 9")
 
     assert registered.transaction is not None
-    assert registered.transaction.description == "zapatillas (1/9)"
+    assert registered.transaction.description == "Zapatillas (1/9)"
     assert registered.transaction.amount_cents == 1_000_000
     payment = registered.payment
     assert payment is not None
@@ -87,7 +87,7 @@ async def test_the_last_installment_has_nothing_to_come(
     registered = await _register(recurring, user, "zapatillas 10.000 cuota 9 de 9")
 
     assert registered.transaction is not None
-    assert registered.transaction.description == "zapatillas (9/9)"
+    assert registered.transaction.description == "Zapatillas (9/9)"
     assert registered.payment is None
 
 
@@ -113,20 +113,20 @@ async def test_charges_when_due_and_stops_after_the_last_installment(
     assert await recurring.due_ids(_at(5, 11)) == [payment.id]
     charged = await recurring.charge(payment.id, _at(5, 11))
     assert charged is not None and charged.chat_id == user.telegram_id
-    assert [t.description for t in charged.transactions] == ["zapatillas (8/9)"]
+    assert [t.description for t in charged.transactions] == ["Zapatillas (8/9)"]
     assert charged.transactions[0].occurred_at == _at(5, 11)
     assert payment.active and payment.next_run_at == _at(5, 12)
 
     # Off for months: the missed one is registered, then it is over.
     charged = await recurring.charge(payment.id, _at(1, 3, 2027))
     assert charged is not None
-    assert [t.description for t in charged.transactions] == ["zapatillas (9/9)"]
+    assert [t.description for t in charged.transactions] == ["Zapatillas (9/9)"]
     assert not payment.active
     assert await recurring.charge(payment.id, _at(1, 3, 2027)) is None
     assert [d for d, _ in await _descriptions(session)] == [
-        "zapatillas (7/9)",
-        "zapatillas (8/9)",
-        "zapatillas (9/9)",
+        "Zapatillas (7/9)",
+        "Zapatillas (8/9)",
+        "Zapatillas (9/9)",
     ]
 
 

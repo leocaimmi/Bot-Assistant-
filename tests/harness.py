@@ -101,14 +101,20 @@ class BotHarness:
         self._update_ids = count(1)
 
     async def send(
-        self, text: str, *, user_id: int | None = None, chat_type: str = "private"
+        self,
+        text: str,
+        *,
+        user_id: int | None = None,
+        chat_type: str = "private",
+        at: datetime | None = None,
     ) -> None:
+        """Send ``text``, now or ``at`` a given moment (for answers that depend on the time)."""
         sender_id = user_id or self.user_id
         update_id = next(self._update_ids)
         chat_id = sender_id if chat_type == "private" else -sender_id
         message = Message(
             message_id=update_id,
-            date=datetime.now(UTC),
+            date=at or datetime.now(UTC),
             chat=Chat(id=chat_id, type=chat_type),
             from_user=self._user(sender_id),
             text=text,

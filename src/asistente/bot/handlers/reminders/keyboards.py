@@ -3,7 +3,9 @@ from collections.abc import Sequence
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from asistente.bot.handlers.common import examples_keyboard
 from asistente.bot.handlers.reminders.callbacks import ReminderAction, ReminderCallback
+from asistente.bot.help import HelpTopic
 from asistente.reminders.models import Reminder
 from asistente.reminders.service import SNOOZE_MINUTES
 
@@ -30,9 +32,9 @@ def created(reminder_id: int) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def listed(reminders: Sequence[Reminder]) -> InlineKeyboardMarkup | None:
+def listed(reminders: Sequence[Reminder]) -> InlineKeyboardMarkup:
     if not reminders:
-        return None
+        return examples_keyboard(HelpTopic.REMINDERS)
     builder = InlineKeyboardBuilder()
     for number, reminder in enumerate(reminders, start=1):
         action = ReminderAction.DELETE_LISTED

@@ -1,10 +1,15 @@
+from datetime import datetime
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from asistente.bot.handlers.common import EXAMPLES_BUTTON
 from asistente.bot.handlers.reminders import views
+from asistente.bot.help import HelpTopic, help_text
 from asistente.finance.models import Transaction
 from asistente.reminders.models import Reminder
 from tests.ai_factories import FakeTranscriber
+from tests.factories import BUENOS_AIRES, MONDAY_NOON
 from tests.harness import BotHarness
 
 
@@ -16,7 +21,7 @@ async def _count(session_factory: async_sessionmaker[AsyncSession], model: type[
 async def test_creates_a_reminder_and_deletes_it(
     harness: BotHarness, session_factory: async_sessionmaker[AsyncSession]
 ) -> None:
-    await harness.send("recordame mañana a las 9 pagar la luz")
+    await harness.send("recordame mañana a las 9 pagar la luz", at=MONDAY_NOON)
 
     assert "⏰ <b>Te lo recuerdo:</b> Pagar la luz" in harness.last_reply
     assert "📅 mañana a las 9:00" in harness.last_reply
@@ -25,6 +30,16 @@ async def test_creates_a_reminder_and_deletes_it(
     await harness.click(harness.button("Borrar"))
     assert harness.last_reply == views.DELETED
     assert await _count(session_factory, Reminder) == 0
+
+
+async def test_late_at_night_the_card_says_the_date(harness: BotHarness) -> None:
+    late_night = datetime(2026, 10, 6, 1, 29, tzinfo=BUENOS_AIRES)  # Tuesday
+
+    await harness.send("recordame mañana a las 9 una reunión", at=late_night)
+    assert "📅 hoy (mar 06/10) a las 9:00" in harness.last_reply
+
+    await harness.send("recordame todos los días a las 12 tomar la B12", at=late_night)
+    assert "· próximo: hoy (mar 06/10)" in harness.last_reply
 
 
 async def test_repeating_and_other_time_zone(harness: BotHarness) -> None:
@@ -74,6 +89,7 @@ async def test_list_and_delete_from_the_list(
 ) -> None:
     await harness.send("/recordatorios")
     assert harness.last_reply == views.EMPTY_LIST
+    assert harness.button(EXAMPLES_BUTTON)
 
     await harness.send("recordame mañana a las 9 pagar la luz")
     await harness.send("recordame todos los lunes a las 10 hora de España la call")
@@ -89,3 +105,6 @@ async def test_list_and_delete_from_the_list(
 
     await harness.click(harness.button("🗑 1"))
     assert harness.last_reply == views.EMPTY_LIST
+
+    await harness.click(harness.button(EXAMPLES_BUTTON))
+    assert harness.last_reply == help_text(HelpTopic.REMINDERS, ai_enabled=False)

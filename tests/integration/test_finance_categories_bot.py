@@ -18,7 +18,7 @@ async def test_decide_where_fuel_goes(harness: BotHarness) -> None:
     assert "<b>nafta</b> → 🚙 Auto (antes estaba en 🚗 Transporte)" in harness.last_reply
 
     await harness.send("nafta 30k")
-    assert "🚙 Auto · nafta" in harness.last_reply
+    assert "🚙 Auto · Nafta" in harness.last_reply
 
 
 async def test_errors_are_explained(harness: BotHarness) -> None:

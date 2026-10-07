@@ -9,11 +9,8 @@ from asistente.core.money import format_ars
 from asistente.finance.models import RecurringPayment, TransactionKind
 from asistente.finance.recurring_service import Charged, RegisteredRecurring, last_charge_at
 
-EMPTY_LIST = (
-    "🔁 No tenés cuotas ni gastos fijos.\n"
-    "Por ejemplo: <code>zapatillas 10.000 cuota 1 de 9</code> o "
-    "<code>seguro del celu 5.000 todos los meses</code>"
-)
+# The examples are one tap away (a button), so the empty list stays short.
+EMPTY_LIST = "🔁 No tenés cuotas ni gastos fijos."
 LAST_INSTALLMENT = "🎉 Era la última cuota."
 
 
