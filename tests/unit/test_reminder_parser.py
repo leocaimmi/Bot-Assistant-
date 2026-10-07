@@ -1,4 +1,4 @@
-from datetime import datetime, time
+from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -6,6 +6,7 @@ import pytest
 from asistente.core.schedule import WORKDAYS, Repeat
 from asistente.reminders.parser import (
     clean_text,
+    is_late_night,
     is_reminder_request,
     parse_reminder,
     parse_when,
@@ -127,6 +128,57 @@ def test_weekdays() -> None:
 
     assert workdays is not None and workdays.schedule.weekdays == WORKDAYS
     assert some is not None and some.schedule.weekdays == frozenset({1, 3, 5})
+
+
+# Tuesday 6 October 2026, 1:29 in Buenos Aires: the user has not slept yet.
+LATE_NIGHT = datetime(2026, 10, 6, 1, 29, tzinfo=BUENOS_AIRES)
+
+
+@pytest.mark.parametrize(
+    ("message", "first_run"),
+    [
+        ("recordame mañana a las 9 una reunión", _ar(6, 9)),  # in a few hours, not tomorrow
+        ("recordame mañana a la tarde", _ar(6, 15)),
+        ("recordame pasado mañana a las 9", _ar(7, 9)),
+        ("recordame mañana a la 1", _ar(7, 1)),  # 1:00 already passed: the calendar tomorrow
+        ("recordame hoy a las 9", _ar(6, 9)),
+        ("recordame a las 9", _ar(6, 9)),
+        ("recordame el miércoles", _ar(7, 9)),
+    ],
+)
+def test_tomorrow_late_at_night_is_the_coming_morning(message: str, first_run: datetime) -> None:
+    parsed = parse_reminder(message, LATE_NIGHT, BUENOS_AIRES)
+
+    assert parsed is not None, message
+    assert parsed.first_run == first_run
+
+
+def test_the_night_ends_at_five() -> None:
+    at_five = datetime(2026, 10, 6, 5, 0, tzinfo=BUENOS_AIRES)
+
+    parsed = parse_reminder("recordame mañana a las 9 una reunión", at_five, BUENOS_AIRES)
+
+    assert parsed is not None
+    assert parsed.first_run == _ar(7, 9)
+    assert is_late_night(at_five - timedelta(minutes=1), BUENOS_AIRES)
+    assert not is_late_night(at_five, BUENOS_AIRES)
+
+
+def test_late_night_counts_in_the_users_time_zone() -> None:
+    # 1:29 in Buenos Aires is 4:29 UTC: still the night for the user.
+    parsed = parse_reminder(
+        "recordame mañana a las 9 una reunión", LATE_NIGHT.astimezone(UTC), BUENOS_AIRES
+    )
+
+    assert parsed is not None
+    assert parsed.first_run == _ar(6, 9)
+
+
+def test_the_ai_timing_follows_the_same_rule() -> None:
+    when = parse_when("mañana a las 9", LATE_NIGHT, BUENOS_AIRES)
+
+    assert when is not None
+    assert when.first_run == _ar(6, 9)
 
 
 def test_another_time_zone() -> None:
