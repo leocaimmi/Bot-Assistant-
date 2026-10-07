@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 from asistente.core.dates import format_datetime, format_short_datetime, month_label
 from asistente.core.money import format_ars
 from asistente.finance.categories import KeywordAssignment
+from asistente.finance.descriptions import format_description
 from asistente.finance.models import Category, Transaction, TransactionKind
 from asistente.finance.reports import Group, MonthlySummary
 from asistente.finance.service import (
@@ -114,7 +115,7 @@ def _new_value(change: Change, tz: ZoneInfo) -> str:
         case DayChange(day, at):
             return f"{day:%d/%m/%Y} {at:%H:%M}"
         case DescriptionChange(description):
-            return escape(description)
+            return escape(format_description(description))  # as it will be stored
         case AccountChange(account):
             return f"{account.emoji} {escape(account.name)}"
 

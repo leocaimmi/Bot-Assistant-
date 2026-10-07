@@ -20,7 +20,7 @@ async def test_delete_by_text_asks_for_confirmation(
 
     await harness.send("eliminar uber 2000")
     assert "¿Borrar este movimiento?" in harness.last_reply
-    assert "uber" in harness.last_reply
+    assert "Uber" in harness.last_reply
     assert await _amounts(session_factory) == [200_000, 150_000]
 
     await harness.click(harness.button("Sí, borrar"))
@@ -33,7 +33,7 @@ async def test_delete_the_latest(harness: BotHarness) -> None:
 
     await harness.send("borrar el último")
 
-    assert "Gimnasio · gym" in harness.last_reply
+    assert "Gimnasio · Gym" in harness.last_reply
 
 
 async def test_edit_opens_the_editor(harness: BotHarness) -> None:

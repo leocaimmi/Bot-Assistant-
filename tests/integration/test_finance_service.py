@@ -34,27 +34,27 @@ async def _category_id(session: AsyncSession, user: User, name: str) -> int:
 @pytest.mark.parametrize(
     ("text", "kind", "category", "account", "cents", "description"),
     [
-        ("uber 2000", EXPENSE, "Transporte", "Mercado Pago", 200_000, "uber"),
-        ("gym 47.000", EXPENSE, "Gimnasio", "Mercado Pago", 4_700_000, "gym"),
+        ("uber 2000", EXPENSE, "Transporte", "Mercado Pago", 200_000, "Uber"),
+        ("gym 47.000", EXPENSE, "Gimnasio", "Mercado Pago", 4_700_000, "Gym"),
         (
             "transferencia utn 200.000",
             INCOME,
             "Transferencias",
             "Mercado Pago",
             20_000_000,
-            "transferencia utn",
+            "Transferencia utn",
         ),
-        ("super 15.430,50 efectivo", EXPENSE, "Supermercado", "Efectivo", 1_543_050, "super"),
-        ("Pedidos Ya 8500 mercado pago", EXPENSE, "Comida", "Mercado Pago", 850_000, "Pedidos Ya"),
-        ("cosas varias 1500", EXPENSE, "Otros gastos", "Mercado Pago", 150_000, "cosas varias"),
-        ("+ 50000 venta bici", INCOME, "Otros ingresos", "Mercado Pago", 5_000_000, "venta bici"),
+        ("super 15.430,50 efectivo", EXPENSE, "Supermercado", "Efectivo", 1_543_050, "Super"),
+        ("Pedidos Ya 8500 mercado pago", EXPENSE, "Comida", "Mercado Pago", 850_000, "Pedidos ya"),
+        ("cosas varias 1500", EXPENSE, "Otros gastos", "Mercado Pago", 150_000, "Cosas varias"),
+        ("+ 50000 venta bici", INCOME, "Otros ingresos", "Mercado Pago", 5_000_000, "Venta bici"),
         (
             "- 5000 transferencia a juan",
             EXPENSE,
             "Transferencias enviadas",
             "Mercado Pago",
             500_000,
-            "transferencia a juan",
+            "Transferencia a juan",
         ),
         ("2000 efectivo", EXPENSE, "Otros gastos", "Efectivo", 200_000, ""),
         (
@@ -63,7 +63,7 @@ async def _category_id(session: AsyncSession, user: User, name: str) -> int:
             "Transferencias enviadas",
             "Mercado Pago",
             500_000,
-            "hice una transferencia a juan",
+            "Hice una transferencia a juan",
         ),
         (
             "me transfirieron 5000 de la utn",
@@ -71,7 +71,7 @@ async def _category_id(session: AsyncSession, user: User, name: str) -> int:
             "Transferencias",
             "Mercado Pago",
             500_000,
-            "me transfirieron de la utn",
+            "Me transfirieron de la utn",
         ),
         (
             "recibí transferencia 276.000",
@@ -79,7 +79,7 @@ async def _category_id(session: AsyncSession, user: User, name: str) -> int:
             "Transferencias",
             "Mercado Pago",
             27_600_000,
-            "recibí transferencia",
+            "Recibí transferencia",
         ),
     ],
 )
@@ -101,6 +101,26 @@ async def test_register(
     assert transaction.amount_cents == cents
     assert transaction.description == description
     assert transaction.occurred_at == NOW
+
+
+async def test_register_splits_the_description_into_items(
+    finance: FinanceService, user: User
+) -> None:
+    transaction = await finance.register(
+        user, "una coca, Doritos picantes y un chocolate 10.200 efectivo", now=NOW
+    )
+
+    assert transaction.description == "Coca, Doritos picantes, Chocolate"
+    assert transaction.account.name == "Efectivo"
+    assert transaction.amount_cents == 1_020_000
+
+
+async def test_items_can_be_found_by_any_of_them(finance: FinanceService, user: User) -> None:
+    transaction = await finance.register(user, "coca, doritos 3000", now=NOW)
+
+    found = await finance.find_by_text(user, "doritos 3000", today=NOW.date())
+
+    assert found.id == transaction.id
 
 
 async def test_register_with_day_keeps_local_time(finance: FinanceService, user: User) -> None:
@@ -146,7 +166,7 @@ async def test_change_amount_description_and_day(finance: FinanceService, user: 
     updated = await finance.change_day(user, transaction.id, date(2026, 9, 15))
 
     assert updated.amount_cents == 250_000
-    assert updated.description == "uber al centro"
+    assert updated.description == "Uber al centro"
     local = updated.occurred_at.astimezone(BUENOS_AIRES)
     assert (local.date(), local.hour, local.minute) == (date(2026, 9, 15), 14, 30)
 

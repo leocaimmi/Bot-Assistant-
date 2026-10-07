@@ -14,6 +14,7 @@ from asistente.core.money import MAX_AMOUNT_CENTS, parse_amount
 from asistente.core.text import normalize
 from asistente.finance.commands import TargetQuery, parse_target
 from asistente.finance.defaults import RECEIVED_TRANSFERS, SENT_TRANSFERS
+from asistente.finance.descriptions import format_description
 from asistente.finance.matching import find_phrase
 from asistente.finance.models import (
     MAX_DESCRIPTION_LENGTH,
@@ -362,4 +363,5 @@ def _mentions_transfer(words: list[str]) -> bool:
 
 
 def _clean_description(text: str) -> str:
-    return " ".join(text.split())[:MAX_DESCRIPTION_LENGTH]
+    """Capitalized items, as stored: "una coca, doritos" -> "Coca, Doritos"."""
+    return format_description(text)[:MAX_DESCRIPTION_LENGTH].rstrip(" ,")

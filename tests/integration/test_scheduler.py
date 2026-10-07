@@ -47,8 +47,8 @@ async def test_charges_due_payments_once_and_tells_quietly(
     assert await charge_due_payments(harness.bot, session_factory, BUENOS_AIRES, NEXT_MONTH) == 1
     assert await charge_due_payments(harness.bot, session_factory, BUENOS_AIRES, NEXT_MONTH) == 0
 
-    assert await _descriptions(session_factory) == ["zapatillas (1/9)", "zapatillas (2/9)"]
-    assert harness.last_reply == "🔁 Anoté <b>zapatillas (2/9)</b>: $10.000 (05/11)"
+    assert await _descriptions(session_factory) == ["Zapatillas (1/9)", "Zapatillas (2/9)"]
+    assert harness.last_reply == "🔁 Anoté <b>Zapatillas (2/9)</b>: $10.000 (05/11)"
     request = harness.session.requests[-1]
     assert isinstance(request, SendMessage)
     assert request.disable_notification  # no sound for an automatic charge

@@ -73,7 +73,7 @@ async def test_registers_a_free_form_expense(
     await ai_harness.send("gasté dos lucas en el super")
 
     assert "Gasto registrado" in ai_harness.last_reply
-    assert "🛒 Supermercado · super" in ai_harness.last_reply
+    assert "🛒 Supermercado · Super" in ai_harness.last_reply
     assert "$2.000" in ai_harness.last_reply
     context = fake_interpreter.contexts[0]
     assert "Transporte" in context.categories
@@ -112,6 +112,23 @@ async def test_edit_shows_a_preview_and_applies_on_confirmation(
     await ai_harness.click(ai_harness.button("Aplicar"))
     assert "Movimiento actualizado" in ai_harness.last_reply
     assert await _amounts(session_factory) == [250_000]
+
+
+async def test_a_new_description_is_previewed_as_it_will_be_stored(
+    ai_harness: BotHarness, fake_interpreter: FakeInterpreter
+) -> None:
+    await ai_harness.send("super 2000")
+    fake_interpreter.will_answer(
+        interpretation(
+            Intent.EDIT, target=target("super"), changes=changes(description="una coca, doritos")
+        )
+    )
+
+    await ai_harness.send("el super en realidad fue una coca y unos doritos")
+    assert "Descripción: Super → Coca, Doritos" in ai_harness.last_reply
+
+    await ai_harness.click(ai_harness.button("Aplicar"))
+    assert "Movimiento actualizado" in ai_harness.last_reply
 
 
 async def test_edit_of_the_last_movement_with_its_time(

@@ -84,6 +84,20 @@ def test_punctuation_and_currency_stay_out_of_the_words(text: str, words: tuple[
     assert parse_entry(text, today=TODAY).words == words
 
 
+@pytest.mark.parametrize(
+    ("text", "words"),
+    [
+        ("coca, doritos 3000", ("coca,", "doritos")),
+        ("coca; doritos 3000", ("coca,", "doritos")),
+        ("coca + doritos 3000", ("coca,", "doritos")),
+        ("coca 2000, doritos", ("coca,", "doritos")),
+        ("coca, efectivo, 2000", ("coca,", "efectivo")),
+    ],
+)
+def test_commas_between_items_stay_in_the_words(text: str, words: tuple[str, ...]) -> None:
+    assert parse_entry(text, today=TODAY).words == words
+
+
 @pytest.mark.parametrize("text", ["hola", "", "uber", "gym 4x10"])
 def test_requires_an_amount(text: str) -> None:
     with pytest.raises(MissingAmountError):

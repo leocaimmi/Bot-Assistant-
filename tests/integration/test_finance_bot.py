@@ -20,7 +20,7 @@ async def test_registers_expense_from_plain_text(harness: BotHarness) -> None:
     reply = harness.last_reply
     assert "Gasto registrado" in reply
     assert "<b>$2.000</b>" in reply
-    assert "Transporte · uber" in reply
+    assert "Transporte · Uber" in reply
     assert "Mercado Pago" in reply
     harness.button("Categoría")
 
@@ -51,7 +51,7 @@ async def test_change_category_with_buttons(harness: BotHarness) -> None:
     await harness.click(harness.button("Categoría"))
     await harness.click(harness.button("Gimnasio"))
 
-    assert "Gimnasio · uber" in harness.last_reply
+    assert "Gimnasio · Uber" in harness.last_reply
     assert "Categoría actualizada" in harness.alerts
 
 

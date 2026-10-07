@@ -34,6 +34,8 @@ MAX_SIMPLE_ENTRY_TOKENS = 7
 
 # Punctuation around a word ("uber," or "(efectivo)") is not part of the description.
 _EDGE_PUNCTUATION = ".,;:!?¡¿()\"'«»"
+# Marks that separate the items of a description (see ``finance.descriptions``).
+_ITEM_BREAKS = (",", ";", "+")
 # The amount is always in pesos: "super 2000 pesos" is just "super".
 _CURRENCY_WORDS = {"peso", "pesos", "ars"}
 # Which way the money went when there is no "+" or "-": a transfer can be received
@@ -104,12 +106,19 @@ def parse_entry(text: str, *, today: date) -> ParsedEntry:
 
     if kind is None:
         kind = _direction(tokens)
-    words = (
-        token.strip(_EDGE_PUNCTUATION) for index, token in enumerate(tokens) if index not in used
-    )
+    words: list[str] = []
+    item_ended = False
+    for index, token in enumerate(tokens):
+        if index not in used and _is_description_word(word := token.strip(_EDGE_PUNCTUATION)):
+            # "coca, doritos 3000": the comma between items stays in the words.
+            if item_ended and words:
+                words[-1] += ","
+            words.append(word)
+            item_ended = False
+        item_ended = item_ended or token.endswith(_ITEM_BREAKS)
     return ParsedEntry(
         amount_cents=amount.cents,
-        words=tuple(word for word in words if _is_description_word(word)),
+        words=tuple(words),
         kind=kind,
         day=day,
     )
