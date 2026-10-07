@@ -13,6 +13,8 @@ from asistente.ai.interpreter import Interpreter
 from asistente.bot.help import TOPIC_BUTTONS, HelpTopic, help_text
 from asistente.bot.ui import edit_or_send
 
+EXAMPLES_BUTTON = "💡 Ver ejemplos"
+
 
 class HelpCallback(CallbackData, prefix="help"):
     topic: HelpTopic
@@ -56,6 +58,13 @@ def help_keyboard(topic: HelpTopic) -> InlineKeyboardMarkup:
         builder.adjust(2)
     else:
         builder.button(text="« Menú", callback_data=HelpCallback(topic=HelpTopic.MENU))
+    return builder.as_markup()
+
+
+def examples_keyboard(topic: HelpTopic) -> InlineKeyboardMarkup:
+    """A button that opens the examples of ``topic``: empty lists offer it instead of text."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text=EXAMPLES_BUTTON, callback_data=HelpCallback(topic=topic))
     return builder.as_markup()
 
 
