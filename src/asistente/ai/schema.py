@@ -34,7 +34,9 @@ class _Strict(BaseModel):
 
 
 class Movement(_Strict):
-    description: str = Field(description="Short, user's words, no amount/date/account")
+    description: str = Field(
+        description="Short, user's words, no amount/date/account; several things: a, b, c"
+    )
     amount: str = Field(description="Digits, Argentine format: 2000, 200.000, 1.500,50")
     income: bool = Field(
         description="True if received (cobré, me transfirieron); false if paid or sent"

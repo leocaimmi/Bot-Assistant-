@@ -79,6 +79,21 @@ async def test_registers_a_free_form_expense(
     assert "Transporte" in context.categories
 
 
+async def test_several_things_bought_at_once_become_items(
+    ai_harness: BotHarness, fake_interpreter: FakeInterpreter
+) -> None:
+    fake_interpreter.will_answer(
+        interpretation(
+            Intent.REGISTER, movements=[movement("coca, Doritos picantes, chocolate", "10.200")]
+        )
+    )
+
+    await ai_harness.send("gasto 10.200 una coca Doritos picantes y un chocolate")
+
+    assert "$10.200" in ai_harness.last_reply
+    assert "   • Coca\n   • Doritos picantes\n   • Chocolate" in ai_harness.last_reply
+
+
 async def test_rejects_an_amount_the_user_did_not_write(
     ai_harness: BotHarness,
     fake_interpreter: FakeInterpreter,
