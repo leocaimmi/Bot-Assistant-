@@ -53,7 +53,8 @@ async def test_escapes_user_text(harness: BotHarness) -> None:
 async def test_explains_format_when_there_is_no_amount(harness: BotHarness) -> None:
     await harness.send("hola")
 
-    assert "No te entendí" in harness.last_reply
+    assert harness.last_reply == "🤔 No te entendí."
+    await harness.click(harness.button("Ver ejemplos"))
     assert "uber 2000" in harness.last_reply
 
 

@@ -334,6 +334,8 @@ async def test_without_ai_corrections_are_never_registered(
 ) -> None:
     await harness.send("el uber eran 2500")
     assert harness.last_reply == CORRECTION_HELP
+    await harness.click(harness.button("Ver ejemplos"))
+    assert "✏️ <b>Corregir y borrar</b>" in harness.last_reply
 
     await harness.send("perdón, modificar y poner 276.500")
     assert harness.last_reply == CORRECTION_HELP

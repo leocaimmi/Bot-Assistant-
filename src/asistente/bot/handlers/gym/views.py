@@ -10,11 +10,9 @@ from asistente.gym.units import format_kg
 
 WEEKDAYS = ("lun", "mar", "mié", "jue", "vie", "sáb", "dom")
 
-FORMAT_EXAMPLES = (
-    "<code>pecho: banco plano 4x12 60kg, inclinado con mancuerna 3x8</code>\n"
-    "Primero las series y después las repeticiones; el peso es opcional."
-)
-WORKOUT_FORMAT_HELP = f"🤔 No entendí el entrenamiento. Escribilo así:\n{FORMAT_EXAMPLES}"
+# Short on purpose: the examples are one tap away (a button).
+WORKOUT_FORMAT_HELP = "🤔 No entendí el entrenamiento: primero series y después repeticiones."
+NO_EXERCISES = "💪 Todavía no anotaste ejercicios."
 HISTORY_USAGE = "Decime el ejercicio, por ejemplo <code>/historial banco plano</code>."
 INVALID_DAY = (
     "🤔 No entendí el día. Probá con <code>/entreno ayer</code> o <code>/entreno 15/09</code>."
@@ -73,14 +71,13 @@ def history(result: ExerciseHistory) -> str:
 
 
 def exercises(items: Iterable[tuple[MuscleGroup, list[str]]]) -> str:
-    lines = ["💪 <b>Tus ejercicios</b>"]
     rows = [
         f"<b>{group.label}</b>: {', '.join(escape(name) for name in names)}"
         for group, names in items
     ]
     if not rows:
-        return "\n".join([*lines, "", f"Todavía no anotaste ejercicios. Probá:\n{FORMAT_EXAMPLES}"])
-    return "\n".join([*lines, "", *rows])
+        return NO_EXERCISES
+    return "\n".join(["💪 <b>Tus ejercicios</b>", "", *rows])
 
 
 def entry_card(entry: WorkoutEntry, today: date, *, title: str | None = None) -> str:

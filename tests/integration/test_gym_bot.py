@@ -53,6 +53,8 @@ async def test_malformed_workout_shows_the_format(harness: BotHarness) -> None:
     await harness.send("pecho: banco plano 4x12, y algo más")
 
     assert harness.last_reply == views.WORKOUT_FORMAT_HELP
+    await harness.click(harness.button("Ver ejemplos"))
+    assert "🏋️ <b>Gimnasio</b>" in harness.last_reply
 
 
 async def test_undo(harness: BotHarness, session_factory: async_sessionmaker[AsyncSession]) -> None:
@@ -179,3 +181,10 @@ async def test_old_delete_buttons_do_nothing(harness: BotHarness) -> None:
 
     assert harness.alerts[-1] == "Este botón ya no está disponible."
     assert "Banco plano" in harness.last_reply
+
+
+async def test_no_exercises_yet(harness: BotHarness) -> None:
+    await harness.send("/ejercicios")
+
+    assert harness.last_reply == views.NO_EXERCISES
+    harness.button("Ver ejemplos")

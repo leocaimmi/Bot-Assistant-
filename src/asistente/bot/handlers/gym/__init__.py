@@ -14,6 +14,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from asistente.bot import pending
+from asistente.bot.handlers.common import examples_keyboard
 from asistente.bot.handlers.gym import keyboards, views
 from asistente.bot.handlers.gym.callbacks import (
     GymDayCallback,
@@ -23,6 +24,7 @@ from asistente.bot.handlers.gym.callbacks import (
     GymUndoCallback,
 )
 from asistente.bot.handlers.gym.states import EditWorkoutEntry
+from asistente.bot.help import HelpTopic
 from asistente.bot.ui import edit_or_send
 from asistente.config import Settings
 from asistente.core.dates import parse_day
@@ -160,7 +162,8 @@ async def list_exercises(message: Message, gym: GymService, user: User) -> None:
         by_group.setdefault(exercise.muscle_group, []).append(exercise.name)
     order = list(MuscleGroup)
     groups = sorted(by_group.items(), key=lambda item: order.index(item[0]))
-    await message.answer(views.exercises(groups))
+    markup = None if groups else examples_keyboard(HelpTopic.GYM)
+    await message.answer(views.exercises(groups), reply_markup=markup)
 
 
 async def undo_logged(

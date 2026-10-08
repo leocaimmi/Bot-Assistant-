@@ -63,6 +63,8 @@ async def test_an_amount_inside_a_reminder_is_not_an_expense(
 async def test_unclear_or_empty_reminders(harness: BotHarness) -> None:
     await harness.send("recordame pagar la luz")
     assert harness.last_reply == views.NOT_UNDERSTOOD
+    await harness.click(harness.button("Ver ejemplos"))
+    assert "⏰ <b>Recordatorios</b>" in harness.last_reply
 
     await harness.send("recordame mañana a las 9")
     assert "¿Qué te recuerdo?" in harness.last_reply
