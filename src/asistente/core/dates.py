@@ -33,6 +33,12 @@ _MONTH_NUMBERS: dict[str, int] = {
 }
 
 _RELATIVE_DAYS = {"hoy": 0, "ayer": 1, "anteayer": 2}
+_WEEKDAYS = {
+    name: number
+    for number, name in enumerate(
+        ("lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo")
+    )
+}
 
 _DAY_PATTERN = re.compile(r"(?P<day>\d{1,2})/(?P<month>\d{1,2})(?:/(?P<year>\d{2}|\d{4}))?")
 _NUMERIC_MONTH_PATTERN = re.compile(r"(?P<month>\d{1,2})(?:[/-](?P<year>\d{2}|\d{4}))?")
@@ -87,13 +93,16 @@ def parse_month(text: str, today: date) -> tuple[int, int] | None:
 
 
 def parse_day(text: str, today: date) -> date | None:
-    """Read a day: ``hoy``, ``ayer``, ``anteayer``, ``15/09`` or ``15/09/2026``.
+    """Read a day: ``hoy``, ``ayer``, ``anteayer``, ``el miércoles``, ``15/09`` or ``15/09/2026``.
 
-    ``dd/mm`` without a year is the latest such date that is not in the future.
+    A weekday is the latest one, today included; ``dd/mm`` without a year is the latest
+    such date that is not in the future.
     """
-    word = normalize(text)
+    word = normalize(text).removeprefix("el ")
     if word in _RELATIVE_DAYS:
         return today - timedelta(days=_RELATIVE_DAYS[word])
+    if word in _WEEKDAYS:
+        return today - timedelta(days=(today.weekday() - _WEEKDAYS[word]) % 7)
 
     matched = _DAY_PATTERN.fullmatch(text.strip())
     if matched is None:

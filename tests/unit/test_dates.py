@@ -67,13 +67,20 @@ def test_parse_month_rejects_invalid_input(text: str) -> None:
         ("20/12", date(2025, 12, 20)),
         ("15/09/2025", date(2025, 9, 15)),
         ("1/2/26", date(2026, 2, 1)),
+        # TODAY is a Monday: a weekday is the latest one, today included.
+        ("lunes", date(2026, 10, 5)),
+        ("domingo", date(2026, 10, 4)),
+        ("el miércoles", date(2026, 9, 30)),
+        ("Sábado", date(2026, 10, 3)),
     ],
 )
 def test_parse_day(text: str, expected: date) -> None:
     assert parse_day(text, TODAY) == expected
 
 
-@pytest.mark.parametrize("text", ["mañana", "32/01", "15/13", "29/02/2026", "2000", "15-09"])
+@pytest.mark.parametrize(
+    "text", ["mañana", "32/01", "15/13", "29/02/2026", "2000", "15-09", "sabados", "el"]
+)
 def test_parse_day_rejects_invalid_input(text: str) -> None:
     assert parse_day(text, TODAY) is None
 
