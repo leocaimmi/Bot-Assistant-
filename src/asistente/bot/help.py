@@ -76,23 +76,25 @@ Primero las series y después las repeticiones; el peso es opcional.
 <code>ayer espalda: dominadas 4x8</code>
 También vale <code>4 series de 12</code> o <code>4 por 12</code>.
 
-<b>Ver</b>
-/entreno · lo de hoy (<code>/entreno ayer</code>)
+<b>Ver y corregir</b>
+/entreno · lo de hoy (<code>/entreno miércoles</code>): tocá un número para corregir
+<code>cambiar press militar a 40kg</code> · corrige un ejercicio
 /semana · días y músculos de la semana
 <code>/historial banco plano</code> · progreso y récord
 /ejercicios · tus ejercicios por músculo"""
 
 _EDIT = """\
 ✏️ <b>Corregir y borrar</b>
-Cada movimiento trae botones para editarlo. También podés escribir:
+Movimientos y entrenamientos traen botones para editarlos. También podés escribir:
 
 <code>cambiar uber 2000 a 2500</code> · el importe
 <code>cambiar uber a comida</code> · la categoría
-<code>cambiar uber 2000</code> · muestra los botones
 <code>borrar uber 2000</code> · pide confirmación
-<code>borrar el último</code> · el más reciente
+<code>cambiar press militar a 40kg</code> · un ejercicio
+<code>cambiar el entreno del miércoles</code> · elegís cuál
+<code>quiero editar algo</code> · lo último que anotaste
 
-🏋️ Un entrenamiento se borra con <b>Deshacer</b> o desde /entreno."""
+Antes de cambiar algo te muestro cómo queda."""
 
 _REMINDERS = """\
 ⏰ <b>Recordatorios</b>
