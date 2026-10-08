@@ -1,4 +1,8 @@
-"""Gym commands and buttons. Workout messages are handled by ``free_text``."""
+"""Gym commands and buttons. Workout messages are handled by ``free_text``.
+
+Fixes written or dictated ("cambiar press militar a 40kg") are shown as before → after
+and applied on OK, like the edits of movements.
+"""
 
 from collections.abc import Awaitable, Callable
 from datetime import date, datetime
@@ -9,9 +13,11 @@ from aiogram.filters import Command, CommandObject, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from asistente.bot import pending
 from asistente.bot.handlers.gym import keyboards, views
 from asistente.bot.handlers.gym.callbacks import (
     GymDayCallback,
+    GymEditConfirmCallback,
     GymEntryAction,
     GymEntryCallback,
     GymUndoCallback,
@@ -20,10 +26,13 @@ from asistente.bot.handlers.gym.states import EditWorkoutEntry
 from asistente.bot.ui import edit_or_send
 from asistente.config import Settings
 from asistente.core.dates import parse_day
-from asistente.gym.models import MuscleGroup
-from asistente.gym.parser import parse_set_change
+from asistente.gym.edits import WorkoutEdit
+from asistente.gym.models import MuscleGroup, WorkoutEntry
+from asistente.gym.parser import SetChange, parse_set_change
 from asistente.gym.service import GymService, LoggedWorkout
 from asistente.users.models import User
+
+PENDING_EDIT_KEY = "pending_gym_edit"
 
 
 async def answer_logged(message: Message, logged: LoggedWorkout, today: date) -> None:
@@ -50,6 +59,85 @@ async def answer_day(message: Message, gym: GymService, user: User, day: date, t
     await message.answer(
         views.day_workout(workout, day, today), reply_markup=keyboards.day_entries(workout)
     )
+
+
+async def edit_from_text(
+    message: Message,
+    edit: WorkoutEdit,
+    gym: GymService,
+    user: User,
+    settings: Settings,
+    state: FSMContext,
+) -> None:
+    """A fix typed or dictated: the change to confirm, else the exercise or its day."""
+    today = message.date.astimezone(settings.tz).date()
+    found = await gym.find_entry(user, edit.exercise, day=edit.day)
+    if found.entry is None:
+        if found.day is None:
+            await message.answer(views.NOTHING_LOGGED)
+        else:
+            await answer_day(message, gym, user, found.day, today)
+        return
+    if edit.change is None:
+        await message.answer(
+            views.entry_card(found.entry, today), reply_markup=keyboards.entry_actions(found.entry)
+        )
+        return
+    await _propose(message, found.entry, edit.change, state, today)
+
+
+async def _propose(
+    message: Message, entry: WorkoutEntry, change: SetChange, state: FSMContext, today: date
+) -> None:
+    current = (entry.sets, entry.reps, entry.weight_grams)
+    sets, reps, weight_grams = change.applied_to(*current)
+    if (sets, reps, weight_grams) == current:
+        await message.answer(
+            views.entry_card(entry, today, title=views.ALREADY_LIKE_THAT),
+            reply_markup=keyboards.entry_actions(entry),
+        )
+        return
+    fix = {"entry_id": entry.id, "sets": sets, "reps": reps, "weight_grams": weight_grams}
+    token = await pending.keep(state, PENDING_EDIT_KEY, fix)
+    title = views.change_preview(entry, sets, reps, weight_grams)
+    await message.answer(
+        views.entry_card(entry, today, title=title), reply_markup=keyboards.confirm_edit(token)
+    )
+
+
+async def resolve_edit(
+    callback: CallbackQuery,
+    callback_data: GymEditConfirmCallback,
+    state: FSMContext,
+    bot: Bot,
+    gym: GymService,
+    user: User,
+    settings: Settings,
+) -> None:
+    fix = await pending.take(state, PENDING_EDIT_KEY, callback_data.token)
+    if fix is None:
+        await callback.answer(views.CHANGE_UNAVAILABLE, show_alert=True)
+        return
+    if not callback_data.apply:
+        await edit_or_send(callback, bot, views.CHANGE_DISCARDED, None)
+        await callback.answer()
+        return
+    weight = fix["weight_grams"]
+    entry = await gym.correct(
+        user,
+        int(fix["entry_id"]),
+        sets=int(fix["sets"]),
+        reps=int(fix["reps"]),
+        weight_grams=int(weight) if weight is not None else None,
+    )
+    today = datetime.now(settings.tz).date()
+    await edit_or_send(
+        callback,
+        bot,
+        views.entry_card(entry, today, title=views.UPDATED),
+        keyboards.entry_actions(entry),
+    )
+    await callback.answer("Cambios aplicados")
 
 
 async def show_week(message: Message, gym: GymService, user: User, settings: Settings) -> None:
@@ -176,6 +264,7 @@ def build_router() -> Router:
     router.message.register(list_exercises, Command("ejercicios"))
     router.callback_query.register(undo_logged, GymUndoCallback.filter())
     router.callback_query.register(open_day, GymDayCallback.filter())
+    router.callback_query.register(resolve_edit, GymEditConfirmCallback.filter())
     entry_actions: dict[GymEntryAction, Callable[..., Awaitable[Any]]] = {
         GymEntryAction.OPEN: open_entry,
         GymEntryAction.EDIT: ask_values,

@@ -3,6 +3,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from asistente.bot.handlers.gym.callbacks import (
     GymDayCallback,
+    GymEditConfirmCallback,
     GymEntryAction,
     GymEntryCallback,
     GymUndoCallback,
@@ -43,4 +44,13 @@ def entry_actions(entry: WorkoutEntry) -> InlineKeyboardMarkup:
         builder.button(text=text, callback_data=GymEntryCallback(action=action, entry_id=entry.id))
     builder.button(text="« Volver al día", callback_data=GymDayCallback.of(entry.workout.day))
     builder.adjust(2, 1)
+    return builder.as_markup()
+
+
+def confirm_edit(token: str) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Aplicar", callback_data=GymEditConfirmCallback(apply=True, token=token))
+    builder.button(
+        text="✖️ Cancelar", callback_data=GymEditConfirmCallback(apply=False, token=token)
+    )
     return builder.as_markup()

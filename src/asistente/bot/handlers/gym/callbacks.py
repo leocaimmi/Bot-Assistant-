@@ -7,6 +7,7 @@ from typing import Annotated, Self
 from aiogram.filters.callback_data import CallbackData
 from pydantic import Field, model_validator
 
+from asistente.bot import pending
 from asistente.core.dates import MAX_YEAR, MIN_YEAR
 
 Id = Annotated[int, Field(ge=1)]
@@ -53,3 +54,10 @@ class GymDayCallback(CallbackData, prefix="gd"):
     @property
     def day(self) -> date:
         return date.fromordinal(self.day_number)
+
+
+class GymEditConfirmCallback(CallbackData, prefix="gec"):
+    """Apply or discard a fix written or dictated (kept in ``bot.pending``)."""
+
+    apply: bool
+    token: pending.Token

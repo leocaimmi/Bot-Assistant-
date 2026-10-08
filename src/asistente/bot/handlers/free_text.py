@@ -2,9 +2,10 @@
 (last) the AI.
 
 Free rules first, in this order: "recordame..." is a reminder, even with an amount in it;
-a leading verb is a command ("borrar uber 2000"); sets x
-reps is a workout ("pecho: banco plano 4x12"); anything with an amount is a transaction
-("uber 2000"). Only what the rules cannot handle goes to the AI, when it is configured.
+a fix of a workout ("cambiar press militar a 40kg") opens it; a leading verb is a command
+("borrar uber 2000"); sets x reps is a workout ("pecho: banco plano 4x12"); anything with
+an amount is a transaction ("uber 2000"). Only what the rules cannot handle goes to the
+AI, when it is configured.
 """
 
 from aiogram import F, Router
@@ -33,6 +34,7 @@ from asistente.finance.service import (
     MissingTargetError,
     NoMatchingTransactionError,
 )
+from asistente.gym.edits import parse_workout_edit
 from asistente.gym.parser import looks_like_workout, parse_workout
 from asistente.gym.service import GymService
 from asistente.reminders.parser import is_reminder_request, mentions_reminders
@@ -98,6 +100,7 @@ async def route_text(
 ) -> None:
     """Act on ``text`` and answer ``message`` (whose text may be a transcript)."""
     ai_on = interpreter is not None
+    today = message.date.astimezone(settings.tz).date()
     command = parse_command(text)
     if command is not None and mentions_reminders(text):
         # "borrar el recordatorio de la pastilla": reminders have their own list.
@@ -111,6 +114,11 @@ async def route_text(
             await message.answer(reminder_views.NOT_UNDERSTOOD)
             return
         # The rules could not read the timing: the AI does (below).
+    # Workout fixes before commands and workouts: "cambiar press militar a 3x10" is
+    # neither a movement nor a new exercise.
+    elif (workout_edit := parse_workout_edit(text, today)) is not None:
+        await gym_handlers.edit_from_text(message, workout_edit, gym, user, settings, state)
+        return
     # Commands: "borrar uber 2000" must not register a new expense.
     elif command is not None:
         if await _run_command(message, command, text, finance, user, settings, state, ai_on=ai_on):

@@ -25,6 +25,10 @@ ASK_VALUES = (
 )
 INVALID_VALUES = "🤔 No entendí. Probá con <code>3x10 40kg</code>, <code>40kg</code> o /cancelar."
 UPDATED = "✏️ Ejercicio actualizado"
+ALREADY_LIKE_THAT = "👌 Ya estaba así"
+NOTHING_LOGGED = "🏋️ Todavía no anotaste entrenamientos."
+CHANGE_UNAVAILABLE = "Este cambio ya no está disponible."
+CHANGE_DISCARDED = "👌 Cambio descartado."
 
 
 def logged_workout(logged: LoggedWorkout, today: date) -> str:
@@ -89,6 +93,13 @@ def entry_card(entry: WorkoutEntry, today: date, *, title: str | None = None) ->
         f"📅 {day_label(entry.workout.day, today)}",
     ]
     return "\n".join(lines)
+
+
+def change_preview(entry: WorkoutEntry, sets: int, reps: int, weight_grams: int | None) -> str:
+    """Title of a fix to confirm: ``3x10 · sin peso → 3x10 · 7,5 kg``."""
+    before = sets_text(entry.sets, entry.reps, entry.weight_grams)
+    after = sets_text(sets, reps, weight_grams)
+    return f"✏️ <b>¿Aplico este cambio?</b>\n{before} → <b>{after}</b>"
 
 
 def sets_text(sets: int, reps: int, weight_grams: int | None) -> str:

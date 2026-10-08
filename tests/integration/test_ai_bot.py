@@ -32,6 +32,8 @@ async def test_rules_never_call_the_ai(
     await ai_harness.send("uber 2000")
     await ai_harness.send("pecho: banco plano 4x12 60kg")
     await ai_harness.send("borrar uber 2000")
+    await ai_harness.send("cambiar banco plano a 65kg")
+    await ai_harness.send("quiero cambiar algo del entrenamiento de hoy")
 
     assert fake_interpreter.texts == []
 
