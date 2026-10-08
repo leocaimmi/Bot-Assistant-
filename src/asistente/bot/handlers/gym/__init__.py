@@ -27,8 +27,10 @@ from asistente.users.models import User
 
 
 async def answer_logged(message: Message, logged: LoggedWorkout, today: date) -> None:
-    """Reply to a just-logged workout, with a button to undo it."""
-    await message.answer(views.logged_workout(logged, today), reply_markup=keyboards.undo(logged))
+    """Reply to a just-logged workout, with buttons to undo or correct it."""
+    await message.answer(
+        views.logged_workout(logged, today), reply_markup=keyboards.logged_actions(logged)
+    )
 
 
 async def show_day(

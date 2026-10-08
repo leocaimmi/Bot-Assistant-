@@ -11,12 +11,14 @@ from asistente.gym.models import Workout, WorkoutEntry
 from asistente.gym.service import LoggedWorkout
 
 
-def undo(logged: LoggedWorkout) -> InlineKeyboardMarkup:
+def logged_actions(logged: LoggedWorkout) -> InlineKeyboardMarkup:
+    """Undo what was just logged, or open the day to correct an exercise."""
     ids = [entry.id for entry in logged.entries]
     builder = InlineKeyboardBuilder()
     builder.button(
         text="↩️ Deshacer", callback_data=GymUndoCallback(first_id=min(ids), last_id=max(ids))
     )
+    builder.button(text="✏️ Editar", callback_data=GymDayCallback.of(logged.day))
     return builder.as_markup()
 
 

@@ -23,6 +23,17 @@ async def test_logs_the_users_example(harness: BotHarness) -> None:
     harness.button("Deshacer")
 
 
+async def test_edit_a_logged_workout(harness: BotHarness) -> None:
+    await harness.send("ayer hombros: press militar 3x8, vuelos laterales 3x10")
+
+    await harness.click(harness.button("✏️ Editar"))
+
+    assert "1. Press militar: 3x8" in harness.last_reply
+    assert "2. Vuelos laterales: 3x10" in harness.last_reply
+    await harness.click(harness.button("✏️ 2"))
+    assert "Vuelos laterales</b>" in harness.last_reply
+
+
 async def test_workouts_win_over_amounts(
     harness: BotHarness, session_factory: async_sessionmaker[AsyncSession]
 ) -> None:
