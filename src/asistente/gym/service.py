@@ -4,9 +4,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from sqlalchemy import delete, select
+from sqlalchemy import Select, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
 from asistente.core.errors import UserError
 from asistente.core.text import normalize
@@ -15,6 +15,7 @@ from asistente.gym.parser import ExerciseItem
 from asistente.users.models import User
 
 HISTORY_SIZE = 10
+SEARCH_WINDOW = 200  # latest entries searched when fixing one by its name
 
 
 class ExerciseNotFoundError(UserError):
@@ -31,6 +32,14 @@ class EntryNotFoundError(UserError):
 class LoggedWorkout:
     day: date
     entries: list[WorkoutEntry]  # with ``exercise`` loaded
+
+
+@dataclass(frozen=True, slots=True)
+class EntrySearch:
+    """An exercise to fix: the entry when it is clear which one, else a day to pick from."""
+
+    entry: WorkoutEntry | None  # with ``exercise`` and ``workout`` loaded
+    day: date | None  # None: nothing was ever logged
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,6 +171,48 @@ class GymService:
         await self._delete_empty_workouts({entry.workout_id})
         return day
 
+    async def entry(self, user: User, entry_id: int) -> WorkoutEntry:
+        """One of the user's entries, with its exercise and workout."""
+        entry = await self._session.scalar(_entries_of(user).where(WorkoutEntry.id == entry_id))
+        if entry is None:
+            raise EntryNotFoundError
+        return entry
+
+    async def correct(
+        self, user: User, entry_id: int, *, sets: int, reps: int, weight_grams: int | None
+    ) -> WorkoutEntry:
+        """Replace the sets, reps and weight of an entry."""
+        entry = await self.entry(user, entry_id)
+        entry.sets, entry.reps, entry.weight_grams = sets, reps, weight_grams
+        await self._session.flush()
+        return entry
+
+    async def last_logged(self, user: User) -> WorkoutEntry | None:
+        """The entry logged most recently, whatever its day."""
+        query = _entries_of(user).order_by(WorkoutEntry.id.desc()).limit(1)
+        return await self._session.scalar(query)
+
+    async def find_entry(
+        self, user: User, words: Sequence[str], *, day: date | None
+    ) -> EntrySearch:
+        """The entry named by ``words`` (normalized), on ``day`` or the latest day it was done.
+
+        Without words, or when several exercises match, the entry is ``None`` and ``day``
+        says which workout to show: the one asked for, or the latest one.
+        """
+        query = _entries_of(user).order_by(Workout.day.desc(), WorkoutEntry.id.desc())
+        if day is not None:
+            query = query.where(Workout.day == day)
+        entries = list(await self._session.scalars(query.limit(SEARCH_WINDOW)))
+        if not entries:
+            return EntrySearch(None, day)
+        matches = [entry for entry in entries if words and _names(entry.exercise.key, words)]
+        if not matches:
+            return EntrySearch(None, entries[0].workout.day)
+        latest_day = matches[0].workout.day
+        same_day = [entry for entry in matches if entry.workout.day == latest_day]
+        return EntrySearch(same_day[0] if len(same_day) == 1 else None, latest_day)
+
     async def _exercise(self, user: User, name: str, group: MuscleGroup | None) -> Exercise:
         key = normalize(name)
         exercise = await self._session.scalar(
@@ -198,3 +249,24 @@ class GymService:
         empty = workout_ids - remaining
         if empty:
             await self._session.execute(delete(Workout).where(Workout.id.in_(empty)))
+
+
+def _entries_of(user: User) -> Select[WorkoutEntry]:
+    return (
+        select(WorkoutEntry)
+        .join(Workout, WorkoutEntry.workout_id == Workout.id)
+        .options(joinedload(WorkoutEntry.exercise), joinedload(WorkoutEntry.workout))
+        .where(Workout.user_id == user.id)
+    )
+
+
+def _names(key: str, words: Sequence[str]) -> bool:
+    """Every word starts a word of the exercise: "press milit" names "press militar con barra".
+
+    Plurals and singulars meet too: "lateral" and "laterales".
+    """
+    names = key.split()
+    return all(
+        any(name.startswith(word) or (len(name) >= 4 and word.startswith(name)) for name in names)
+        for word in words
+    )
