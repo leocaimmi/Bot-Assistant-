@@ -5,41 +5,14 @@ Pure parsing only: the service finds the transaction and applies the change.
 
 from dataclasses import dataclass
 from datetime import date
-from enum import StrEnum
 
+from asistente.core.commands import CommandKind, command_kind
 from asistente.core.dates import parse_day
 from asistente.core.money import find_amounts
 from asistente.core.text import normalize
 
-
-class CommandKind(StrEnum):
-    DELETE = "delete"
-    EDIT = "edit"
-
-
-# Normalized (no accents), so "borrá" and "cambiá" match too. Ambiguous words such as
-# "sacar" ("sacar plata 5000" is an expense) are deliberately left out.
-_VERBS = {
-    "borrar": CommandKind.DELETE,
-    "borra": CommandKind.DELETE,
-    "eliminar": CommandKind.DELETE,
-    "elimina": CommandKind.DELETE,
-    "anular": CommandKind.DELETE,
-    "anula": CommandKind.DELETE,
-    "cambiar": CommandKind.EDIT,
-    "cambia": CommandKind.EDIT,
-    "editar": CommandKind.EDIT,
-    "edita": CommandKind.EDIT,
-    "corregir": CommandKind.EDIT,
-    "corregi": CommandKind.EDIT,
-    "corrige": CommandKind.EDIT,
-    "modificar": CommandKind.EDIT,
-    "modifica": CommandKind.EDIT,
-}
 _STOP_WORDS = {"el", "la", "los", "las", "un", "una", "de", "del", "al", "mi", "movimiento"}
 _LATEST_WORDS = {"ultimo", "ultima"}
-# "el uber eran 2500", "en vez de 2000": corrections, never a new movement.
-_CORRECTION_WORDS = {"era", "eran", "vez", "lugar", "equivoque", "equivocado", "equivocada"}
 
 
 # Longer commands ("modificar la última transferencia y poner...") are left to the AI.
@@ -69,18 +42,13 @@ class TargetQuery:
 def parse_command(text: str) -> TextCommand | None:
     # Any whitespace ends the verb: a dictated "Borrar. El uber" arrives as two lines.
     first, _, rest = " ".join(text.split()).partition(" ")
-    kind = _VERBS.get(normalize(first))
+    kind = command_kind(first)
     return TextCommand(kind=kind, rest=rest.strip()) if kind is not None else None
 
 
 def is_simple_command(text: str) -> bool:
     """Short enough for the rules: ``cambiar uber 2000 a 2500``, ``borrar el último``."""
     return len(text.split()) <= MAX_SIMPLE_COMMAND_TOKENS
-
-
-def looks_like_correction(text: str) -> bool:
-    """A correction ("eran 2500") or a command verb anywhere ("perdón, modificar...")."""
-    return any(word in _CORRECTION_WORDS or word in _VERBS for word in normalize(text).split())
 
 
 def split_new_value(rest: str) -> tuple[str, str] | None:

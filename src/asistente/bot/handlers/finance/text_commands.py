@@ -6,7 +6,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from asistente.bot.handlers.finance import edits, keyboards, views
-from asistente.finance.commands import CommandKind, TextCommand, split_new_value
+from asistente.core.commands import CommandKind
+from asistente.finance.commands import TextCommand, split_new_value
 from asistente.finance.service import FinanceService
 from asistente.users.models import User
 

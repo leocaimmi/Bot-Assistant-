@@ -23,12 +23,8 @@ from asistente.bot.handlers.finance import text_commands
 from asistente.bot.handlers.gym import views as gym_views
 from asistente.bot.handlers.reminders import views as reminder_views
 from asistente.config import Settings
-from asistente.finance.commands import (
-    TextCommand,
-    is_simple_command,
-    looks_like_correction,
-    parse_command,
-)
+from asistente.core.commands import looks_like_correction
+from asistente.finance.commands import TextCommand, is_simple_command, parse_command
 from asistente.finance.parser import MissingAmountError, is_simple_entry
 from asistente.finance.recurring import parse_recurring
 from asistente.finance.recurring_service import RecurringPaymentService
