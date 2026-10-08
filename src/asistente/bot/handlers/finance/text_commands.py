@@ -41,7 +41,4 @@ async def handle_command(
 
     # "cambiar uber 2000": show every editable field.
     transaction = await finance.find_by_text(user, command.rest, today=today)
-    await message.answer(
-        views.transaction_card(transaction, tz, title="✏️ ¿Qué querés cambiar?"),
-        reply_markup=keyboards.transaction_editor(transaction),
-    )
+    await edits.show_editor(message, transaction, tz)

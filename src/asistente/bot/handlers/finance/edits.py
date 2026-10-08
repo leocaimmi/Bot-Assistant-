@@ -38,6 +38,14 @@ class EditConfirmCallback(CallbackData, prefix="edc"):
     token: pending.Token
 
 
+async def show_editor(message: Message, transaction: Transaction, tz: ZoneInfo) -> None:
+    """The movement with a button per field, when the sentence does not say what changes."""
+    await message.answer(
+        views.transaction_card(transaction, tz, title="✏️ ¿Qué querés cambiar?"),
+        reply_markup=keyboards.transaction_editor(transaction),
+    )
+
+
 async def propose(
     message: Message,
     transaction: Transaction,
