@@ -210,6 +210,10 @@ class FinanceService:
             raise TransactionNotFoundError
         return transaction
 
+    async def last_registered(self, user: User) -> Transaction | None:
+        """The movement registered most recently, whatever its date."""
+        return await self._repository.last_created(user.id)
+
     async def page(
         self, user: User, number: int, *, month: tuple[int, int] | None = None
     ) -> TransactionPage:

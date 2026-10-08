@@ -2,7 +2,8 @@
 (last) the AI.
 
 Free rules first, in this order: "recordame..." is a reminder, even with an amount in it;
-a fix of a workout ("cambiar press militar a 40kg") opens it; a leading verb is a command
+a fix of a workout ("cambiar press militar a 40kg") opens it, and one that does not say
+what ("quiero editar algo") opens the latest thing logged; a leading verb is a command
 ("borrar uber 2000"); sets x reps is a workout ("pecho: banco plano 4x12"); anything with
 an amount is a transaction ("uber 2000"). Only what the rules cannot handle goes to the
 AI, when it is configured.
@@ -15,7 +16,7 @@ from aiogram.types import Message
 
 from asistente.ai.interpreter import Interpreter
 from asistente.ai.usage import AiUsageService, DailyBudget
-from asistente.bot.handlers import assistant
+from asistente.bot.handlers import assistant, latest
 from asistente.bot.handlers import gym as gym_handlers
 from asistente.bot.handlers import recurring as recurring_handlers
 from asistente.bot.handlers import reminders as reminder_handlers
@@ -24,7 +25,7 @@ from asistente.bot.handlers.finance import text_commands
 from asistente.bot.handlers.gym import views as gym_views
 from asistente.bot.handlers.reminders import views as reminder_views
 from asistente.config import Settings
-from asistente.core.commands import looks_like_correction
+from asistente.core.commands import is_vague_edit, looks_like_correction
 from asistente.finance.commands import TextCommand, is_simple_command, parse_command
 from asistente.finance.parser import MissingAmountError, is_simple_entry
 from asistente.finance.recurring import parse_recurring
@@ -118,6 +119,9 @@ async def route_text(
     # neither a movement nor a new exercise.
     elif (workout_edit := parse_workout_edit(text, today)) is not None:
         await gym_handlers.edit_from_text(message, workout_edit, gym, user, settings, state)
+        return
+    elif is_vague_edit(text):
+        await latest.edit_latest(message, finance, gym, user, settings)
         return
     # Commands: "borrar uber 2000" must not register a new expense.
     elif command is not None:

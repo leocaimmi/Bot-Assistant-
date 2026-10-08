@@ -1,6 +1,6 @@
 import pytest
 
-from asistente.core.commands import CommandKind, command_kind, looks_like_correction
+from asistente.core.commands import CommandKind, command_kind, is_vague_edit, looks_like_correction
 
 
 @pytest.mark.parametrize(
@@ -24,3 +24,22 @@ def test_command_kind(word: str, kind: CommandKind | None) -> None:
 )
 def test_looks_like_correction(text: str, correction: bool) -> None:
     assert looks_like_correction(text) is correction
+
+
+@pytest.mark.parametrize(
+    ("text", "vague"),
+    [
+        ("Quiero editar algo", True),
+        ("cambiar el último", True),
+        ("me equivoqué", True),
+        ("¿Cómo hago para corregir algo?", True),
+        ("editar", True),
+        ("cambiar uber 2000", False),
+        ("corregir el último movimiento", False),
+        ("quiero editar algo del entrenamiento", False),
+        ("borrar el último", False),
+        ("quiero algo", False),
+    ],
+)
+def test_is_vague_edit(text: str, vague: bool) -> None:
+    assert is_vague_edit(text) is vague

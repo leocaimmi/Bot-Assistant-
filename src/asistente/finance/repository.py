@@ -70,6 +70,10 @@ class FinanceRepository:
         query = _transactions_of(user_id).where(Transaction.id == transaction_id)
         return await self._session.scalar(query)
 
+    async def last_created(self, user_id: int) -> Transaction | None:
+        query = _transactions_of(user_id).order_by(Transaction.id.desc()).limit(1)
+        return await self._session.scalar(query)
+
     async def transactions(
         self,
         user_id: int,

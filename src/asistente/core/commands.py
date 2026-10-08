@@ -36,6 +36,44 @@ VERBS: dict[str, CommandKind] = {
 CORRECTION_WORDS = frozenset(
     {"era", "eran", "vez", "lugar", "equivoque", "equivocado", "equivocada"}
 )
+# Words that do not say what to fix: "quiero editar algo", "corregir lo último".
+_VAGUE_WORDS = frozenset(
+    {
+        "quiero",
+        "queria",
+        "quisiera",
+        "necesito",
+        "como",
+        "hago",
+        "para",
+        "puedo",
+        "algo",
+        "eso",
+        "esto",
+        "lo",
+        "el",
+        "la",
+        "un",
+        "una",
+        "de",
+        "del",
+        "me",
+        "que",
+        "ultimo",
+        "ultima",
+        "anterior",
+        "recien",
+        "hice",
+        "anote",
+        "puse",
+        "cargue",
+        "dato",
+        "cosa",
+        "por",
+        "favor",
+        "porfa",
+    }
+)
 
 
 def command_kind(word: str) -> CommandKind | None:
@@ -46,3 +84,12 @@ def command_kind(word: str) -> CommandKind | None:
 def looks_like_correction(text: str) -> bool:
     """A correction ("eran 2500") or a command verb anywhere ("perdón, modificar...")."""
     return any(word in CORRECTION_WORDS or word in VERBS for word in normalize(text).split())
+
+
+def is_vague_edit(text: str) -> bool:
+    """An edit that does not say what to fix: "quiero editar algo", "me equivoqué"."""
+    words = normalize(text).split()
+    asks = any(VERBS.get(word) is CommandKind.EDIT or word in CORRECTION_WORDS for word in words)
+    return asks and all(
+        word in VERBS or word in CORRECTION_WORDS or word in _VAGUE_WORDS for word in words
+    )
