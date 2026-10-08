@@ -1,8 +1,13 @@
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from asistente.bot.handlers.gym.callbacks import GymEntryCallback, GymUndoCallback
-from asistente.gym.models import Workout
+from asistente.bot.handlers.gym.callbacks import (
+    GymDayCallback,
+    GymEntryAction,
+    GymEntryCallback,
+    GymUndoCallback,
+)
+from asistente.gym.models import Workout, WorkoutEntry
 from asistente.gym.service import LoggedWorkout
 
 
@@ -16,10 +21,24 @@ def undo(logged: LoggedWorkout) -> InlineKeyboardMarkup:
 
 
 def day_entries(workout: Workout | None) -> InlineKeyboardMarkup | None:
+    """A button per exercise, numbered like the list."""
     if workout is None or not workout.entries:
         return None
     builder = InlineKeyboardBuilder()
     for number, entry in enumerate(workout.entries, start=1):
-        builder.button(text=f"🗑 {number}", callback_data=GymEntryCallback(entry_id=entry.id))
+        builder.button(
+            text=f"✏️ {number}",
+            callback_data=GymEntryCallback(action=GymEntryAction.OPEN, entry_id=entry.id),
+        )
     builder.adjust(5)
+    return builder.as_markup()
+
+
+def entry_actions(entry: WorkoutEntry) -> InlineKeyboardMarkup:
+    """Requires ``entry.workout`` loaded."""
+    builder = InlineKeyboardBuilder()
+    for text, action in (("✏️ Corregir", GymEntryAction.EDIT), ("🗑 Borrar", GymEntryAction.DELETE)):
+        builder.button(text=text, callback_data=GymEntryCallback(action=action, entry_id=entry.id))
+    builder.button(text="« Volver al día", callback_data=GymDayCallback.of(entry.workout.day))
+    builder.adjust(2, 1)
     return builder.as_markup()

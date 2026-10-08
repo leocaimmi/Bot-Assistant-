@@ -19,6 +19,12 @@ HISTORY_USAGE = "Decime el ejercicio, por ejemplo <code>/historial banco plano</
 INVALID_DAY = (
     "🤔 No entendí el día. Probá con <code>/entreno ayer</code> o <code>/entreno 15/09</code>."
 )
+ASK_VALUES = (
+    "✏️ ¿Cómo quedó? Por ejemplo <code>3x10 40kg</code>, <code>40kg</code> o "
+    "<code>sin peso</code>.\n/cancelar para dejarlo."
+)
+INVALID_VALUES = "🤔 No entendí. Probá con <code>3x10 40kg</code>, <code>40kg</code> o /cancelar."
+UPDATED = "✏️ Ejercicio actualizado"
 
 
 def logged_workout(logged: LoggedWorkout, today: date) -> str:
@@ -33,7 +39,7 @@ def day_workout(workout: Workout | None, day: date, today: date) -> str:
         return f"{title}\n\nNo anotaste nada ese día."
     lines = [title, *_by_group(workout.entries, numbered=True)]
     total = sum(entry.sets for entry in workout.entries)
-    lines += ["", f"{total} series en total. Tocá 🗑 para borrar un ejercicio."]
+    lines += ["", f"{total} series en total. Tocá un número para corregirlo o borrarlo."]
     return "\n".join(lines)
 
 
@@ -71,6 +77,23 @@ def exercises(items: Iterable[tuple[MuscleGroup, list[str]]]) -> str:
     if not rows:
         return "\n".join([*lines, "", f"Todavía no anotaste ejercicios. Probá:\n{FORMAT_EXAMPLES}"])
     return "\n".join([*lines, "", *rows])
+
+
+def entry_card(entry: WorkoutEntry, today: date, *, title: str | None = None) -> str:
+    """One exercise of a workout (``exercise`` and ``workout`` loaded)."""
+    exercise = entry.exercise
+    lines = [title, ""] if title else []
+    lines += [
+        f"🏋️ <b>{escape(exercise.name)}</b> · {exercise.muscle_group.label}",
+        sets_text(entry.sets, entry.reps, entry.weight_grams),
+        f"📅 {day_label(entry.workout.day, today)}",
+    ]
+    return "\n".join(lines)
+
+
+def sets_text(sets: int, reps: int, weight_grams: int | None) -> str:
+    """``3x10 · 7,5 kg`` or ``3x10 · sin peso``."""
+    return f"{sets}x{reps} · {format_kg(weight_grams) if weight_grams else 'sin peso'}"
 
 
 def undone(count: int) -> str:

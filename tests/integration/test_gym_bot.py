@@ -60,7 +60,10 @@ async def test_day_view_and_delete_entry(harness: BotHarness) -> None:
     assert "1. Banco plano: 4x12 · 60 kg" in harness.last_reply
     assert "2. Fondos: 3x10" in harness.last_reply
 
-    await harness.click(harness.button("🗑 1"))
+    await harness.click(harness.button("✏️ 1"))
+    assert "🏋️ <b>Banco plano</b> · Pecho\n4x12 · 60 kg" in harness.last_reply
+
+    await harness.click(harness.button("Borrar"))
     assert "Banco plano" not in harness.last_reply
     assert "1. Fondos: 3x10" in harness.last_reply
 
@@ -107,3 +110,61 @@ async def test_exercise_names_are_escaped(harness: BotHarness) -> None:
     await harness.send("pecho: <b>press</b> 4x12")
 
     assert "&lt;b&gt;press&lt;/b&gt;" in harness.last_reply
+
+
+async def test_correct_an_exercise_from_the_day(harness: BotHarness) -> None:
+    await harness.send("hombros: vuelos laterales 3x10, press militar 3x8 40kg")
+    await harness.send("/entreno")
+    await harness.click(harness.button("✏️ 1"))
+
+    await harness.click(harness.button("Corregir"))
+    assert harness.last_reply == views.ASK_VALUES
+    await harness.send("7,5")
+
+    reply = harness.last_reply
+    assert reply.startswith(views.UPDATED)
+    assert "Vuelos laterales</b> · Hombros\n3x10 · 7,5 kg" in reply
+
+    await harness.click(harness.button("Volver al día"))
+    assert "1. Vuelos laterales: 3x10 · 7,5 kg" in harness.last_reply
+    assert "2. Press militar: 3x8 · 40 kg" in harness.last_reply
+
+
+async def test_correct_sets_and_remove_the_weight(harness: BotHarness) -> None:
+    await harness.send("banco plano 4x12 60kg")
+    await harness.send("/entreno")
+    await harness.click(harness.button("✏️ 1"))
+    await harness.click(harness.button("Corregir"))
+
+    await harness.send("no sé")
+    assert harness.last_reply == views.INVALID_VALUES
+
+    await harness.send("4x10 sin peso")
+    assert "4x10 · sin peso" in harness.last_reply
+
+    await harness.send("uber 2000")  # the step ended: this is a new movement
+    assert "Gasto registrado" in harness.last_reply
+
+
+async def test_cancel_a_correction(harness: BotHarness) -> None:
+    await harness.send("banco plano 4x12 60kg")
+    await harness.send("/entreno")
+    await harness.click(harness.button("✏️ 1"))
+    await harness.click(harness.button("Corregir"))
+
+    await harness.send("/cancelar")
+    await harness.send("/entreno")
+
+    assert "Banco plano: 4x12 · 60 kg" in harness.last_reply
+
+
+async def test_old_delete_buttons_do_nothing(harness: BotHarness) -> None:
+    await harness.send("banco plano 4x12 60kg")
+    await harness.send("/entreno")
+    entry_id = harness.button("✏️ 1").rsplit(":", 1)[1]
+
+    await harness.click(f"ge:{entry_id}")  # the old "🗑 1" button deleted right away
+    await harness.send("/entreno")
+
+    assert harness.alerts[-1] == "Este botón ya no está disponible."
+    assert "Banco plano" in harness.last_reply

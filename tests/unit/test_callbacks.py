@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 from aiogram.filters.callback_data import CallbackData
 
@@ -7,6 +9,7 @@ from asistente.bot.handlers.finance.callbacks import (
     TxCallback,
     TxPageCallback,
 )
+from asistente.bot.handlers.gym.callbacks import GymDayCallback, GymEntryCallback
 
 
 @pytest.mark.parametrize(
@@ -19,6 +22,9 @@ from asistente.bot.handlers.finance.callbacks import (
         (TxPageCallback, "txp:0:1500:3"),
         (TxCallback, "tx:open:0"),
         (TxCallback, "tx:hack:1"),
+        (GymDayCallback, "gd:0"),
+        (GymDayCallback, "gd:99999999"),
+        (GymEntryCallback, "ge:hack:1"),
     ],
 )
 def test_rejects_forged_data(callback_type: type[CallbackData], data: str) -> None:
@@ -33,3 +39,9 @@ def test_round_trip() -> None:
     assert TxPageCallback.unpack(page.pack()).period == (2026, 9)
     assert TxPageCallback.unpack(TxPageCallback(page=0).pack()).period is None
     assert TxCallback.unpack("tx:del:7") == TxCallback(action=TxAction.DELETE, tx_id=7)
+
+
+def test_gym_day_callback_round_trip() -> None:
+    day = date(2026, 10, 7)
+
+    assert GymDayCallback.unpack(GymDayCallback.of(day).pack()).day == day

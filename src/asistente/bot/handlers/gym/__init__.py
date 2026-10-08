@@ -1,17 +1,27 @@
 """Gym commands and buttons. Workout messages are handled by ``free_text``."""
 
+from collections.abc import Awaitable, Callable
 from datetime import date, datetime
+from typing import Any
 
-from aiogram import Bot, Router
-from aiogram.filters import Command, CommandObject
+from aiogram import Bot, F, Router
+from aiogram.filters import Command, CommandObject, StateFilter
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from asistente.bot.handlers.gym import keyboards, views
-from asistente.bot.handlers.gym.callbacks import GymEntryCallback, GymUndoCallback
+from asistente.bot.handlers.gym.callbacks import (
+    GymDayCallback,
+    GymEntryAction,
+    GymEntryCallback,
+    GymUndoCallback,
+)
+from asistente.bot.handlers.gym.states import EditWorkoutEntry
 from asistente.bot.ui import edit_or_send
 from asistente.config import Settings
 from asistente.core.dates import parse_day
 from asistente.gym.models import MuscleGroup
+from asistente.gym.parser import parse_set_change
 from asistente.gym.service import GymService, LoggedWorkout
 from asistente.users.models import User
 
@@ -29,6 +39,11 @@ async def show_day(
     if day is None:
         await message.answer(views.INVALID_DAY)
         return
+    await answer_day(message, gym, user, day, today)
+
+
+async def answer_day(message: Message, gym: GymService, user: User, day: date, today: date) -> None:
+    """The workout of ``day``, with a button per exercise to correct or delete it."""
     workout = await gym.day(user, day)
     await message.answer(
         views.day_workout(workout, day, today), reply_markup=keyboards.day_entries(workout)
@@ -66,6 +81,68 @@ async def undo_logged(
     await callback.answer("Deshecho")
 
 
+async def open_day(
+    callback: CallbackQuery,
+    callback_data: GymDayCallback,
+    bot: Bot,
+    gym: GymService,
+    user: User,
+    settings: Settings,
+) -> None:
+    await _show_day(callback, bot, gym, user, callback_data.day, settings)
+    await callback.answer()
+
+
+async def open_entry(
+    callback: CallbackQuery,
+    callback_data: GymEntryCallback,
+    bot: Bot,
+    gym: GymService,
+    user: User,
+    settings: Settings,
+) -> None:
+    entry = await gym.entry(user, callback_data.entry_id)
+    today = datetime.now(settings.tz).date()
+    await edit_or_send(
+        callback, bot, views.entry_card(entry, today), keyboards.entry_actions(entry)
+    )
+    await callback.answer()
+
+
+async def ask_values(
+    callback: CallbackQuery,
+    callback_data: GymEntryCallback,
+    state: FSMContext,
+    bot: Bot,
+    gym: GymService,
+    user: User,
+) -> None:
+    await gym.entry(user, callback_data.entry_id)  # fail early if it no longer exists
+    await state.set_state(EditWorkoutEntry.values)
+    await state.update_data(entry_id=callback_data.entry_id)
+    await bot.send_message(callback.from_user.id, views.ASK_VALUES)
+    await callback.answer()
+
+
+async def receive_values(
+    message: Message, state: FSMContext, gym: GymService, user: User, settings: Settings
+) -> None:
+    change = parse_set_change(message.text or "")
+    if change is None:
+        await message.answer(views.INVALID_VALUES)
+        return
+    entry_id = int((await state.get_data())["entry_id"])
+    await state.clear()  # the step ends here even if the update fails
+    entry = await gym.entry(user, entry_id)
+    sets, reps, weight_grams = change.applied_to(entry.sets, entry.reps, entry.weight_grams)
+    entry = await gym.correct(user, entry_id, sets=sets, reps=reps, weight_grams=weight_grams)
+    today = message.date.astimezone(settings.tz).date()
+    await message.answer(
+        views.entry_card(entry, today, title=views.UPDATED),
+        reply_markup=keyboards.entry_actions(entry),
+    )
+
+
 async def delete_entry(
     callback: CallbackQuery,
     callback_data: GymEntryCallback,
@@ -75,12 +152,18 @@ async def delete_entry(
     settings: Settings,
 ) -> None:
     day = await gym.delete_entry(user, callback_data.entry_id)
+    await _show_day(callback, bot, gym, user, day, settings)
+    await callback.answer("Borrado")
+
+
+async def _show_day(
+    callback: CallbackQuery, bot: Bot, gym: GymService, user: User, day: date, settings: Settings
+) -> None:
     today = datetime.now(settings.tz).date()
     workout = await gym.day(user, day)
     await edit_or_send(
         callback, bot, views.day_workout(workout, day, today), keyboards.day_entries(workout)
     )
-    await callback.answer("Borrado")
 
 
 def build_router() -> Router:
@@ -90,5 +173,15 @@ def build_router() -> Router:
     router.message.register(show_history, Command("historial"))
     router.message.register(list_exercises, Command("ejercicios"))
     router.callback_query.register(undo_logged, GymUndoCallback.filter())
-    router.callback_query.register(delete_entry, GymEntryCallback.filter())
+    router.callback_query.register(open_day, GymDayCallback.filter())
+    entry_actions: dict[GymEntryAction, Callable[..., Awaitable[Any]]] = {
+        GymEntryAction.OPEN: open_entry,
+        GymEntryAction.EDIT: ask_values,
+        GymEntryAction.DELETE: delete_entry,
+    }
+    for action, handler in entry_actions.items():
+        router.callback_query.register(handler, GymEntryCallback.filter(F.action == action))
+    router.message.register(
+        receive_values, StateFilter(EditWorkoutEntry.values), F.text, ~F.text.startswith("/")
+    )
     return router
