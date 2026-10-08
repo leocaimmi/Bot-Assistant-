@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from sqlalchemy import func, select
@@ -6,7 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from asistente.gym.models import Exercise, MuscleGroup, Workout
 from asistente.gym.parser import ExerciseItem
-from asistente.gym.service import EntryNotFoundError, ExerciseNotFoundError, GymService
+from asistente.gym.service import (
+    EntryNotFoundError,
+    EntrySearch,
+    ExerciseNotFoundError,
+    GymService,
+)
 from asistente.users.models import User
 from asistente.users.service import UserService
 from tests.factories import STRANGER_USER_ID
@@ -124,3 +129,55 @@ async def test_cannot_touch_other_users_entries(
     with pytest.raises(EntryNotFoundError):
         await gym.delete_entries(user, entry_id, entry_id)
     assert await gym.day(user, MONDAY) is None
+    with pytest.raises(EntryNotFoundError):
+        await gym.entry(user, entry_id)
+    with pytest.raises(EntryNotFoundError):
+        await gym.correct(user, entry_id, sets=3, reps=10, weight_grams=None)
+    assert (await gym.find_entry(user, ("banco",), day=None)).day is None
+
+
+async def test_correct_an_entry(gym: GymService, user: User) -> None:
+    logged = await gym.log(user, [_item("Vuelos laterales", 3, 10)], day=MONDAY)
+
+    entry = await gym.correct(user, logged.entries[0].id, sets=4, reps=8, weight_grams=7_500)
+
+    assert (entry.sets, entry.reps, entry.weight_grams) == (4, 8, 7_500)
+    assert (await gym.entry(user, entry.id)).workout.day == MONDAY
+
+
+async def test_find_an_entry_by_name_and_day(gym: GymService, user: User) -> None:
+    tuesday = MONDAY + timedelta(days=1)
+    await gym.log(user, [_item("Press militar con barra"), _item("Vuelos laterales")], day=MONDAY)
+    await gym.log(user, [_item("Press militar con barra")], day=tuesday)
+
+    latest = await gym.find_entry(user, ("press", "militar"), day=None)
+    on_monday = await gym.find_entry(user, ("lateral",), day=MONDAY)
+
+    assert latest.entry is not None
+    assert latest.entry.workout.day == tuesday
+    assert on_monday.entry is not None
+    assert on_monday.entry.exercise.name == "Vuelos laterales"
+
+
+async def test_unclear_names_show_the_day(gym: GymService, user: User) -> None:
+    tuesday = MONDAY + timedelta(days=1)
+    await gym.log(user, [_item("Press militar"), _item("Press plano")], day=MONDAY)
+    await gym.log(user, [_item("Sentadilla")], day=tuesday)
+
+    assert await gym.find_entry(user, ("press",), day=None) == EntrySearch(None, MONDAY)
+    assert await gym.find_entry(user, ("remo",), day=None) == EntrySearch(None, tuesday)
+    assert await gym.find_entry(user, (), day=MONDAY) == EntrySearch(None, MONDAY)
+    assert await gym.find_entry(user, (), day=MONDAY - timedelta(days=1)) == EntrySearch(
+        None, MONDAY - timedelta(days=1)
+    )
+
+
+async def test_last_logged(gym: GymService, user: User) -> None:
+    assert await gym.last_logged(user) is None
+    await gym.log(user, [_item("Sentadilla")], day=MONDAY + timedelta(days=1))
+    await gym.log(user, [_item("Banco plano")], day=MONDAY)
+
+    last = await gym.last_logged(user)
+
+    assert last is not None
+    assert (last.exercise.name, last.workout.day) == ("Banco plano", MONDAY)

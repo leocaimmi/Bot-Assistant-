@@ -15,12 +15,8 @@ from asistente.reminders.parser import is_late_night
 WEEKDAYS_SHORT = ("lun", "mar", "mié", "jue", "vie", "sáb", "dom")
 _WEEKDAYS_PLURAL = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábados", "domingos")
 
-NOT_UNDERSTOOD = (
-    "🤔 No entendí cuándo. Probá así:\n"
-    "<code>recordame mañana a las 9 pagar la luz</code>\n"
-    "<code>recordame todos los lunes a las 12 la pastilla</code>\n"
-    "<code>recordame en 20 minutos sacar la ropa</code>"
-)
+# Short on purpose: the examples are one tap away (a button).
+NOT_UNDERSTOOD = "🤔 No entendí cuándo te lo recuerdo."
 USE_THE_LIST = "⏰ Para ver o borrar recordatorios usá /recordatorios."
 DELETED = "🗑 Recordatorio borrado."
 # The examples are one tap away (a button), so the empty list stays short.

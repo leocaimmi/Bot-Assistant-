@@ -151,10 +151,7 @@ async def _act(
             if changes is None:
                 return False
             if not changes:
-                await message.answer(
-                    views.transaction_card(transaction, tz, title="✏️ ¿Qué querés cambiar?"),
-                    reply_markup=keyboards.transaction_editor(transaction),
-                )
+                await edits.show_editor(message, transaction, tz)
                 return True
             await edits.propose(message, transaction, changes, state, tz)
             return True

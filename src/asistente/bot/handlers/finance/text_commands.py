@@ -6,7 +6,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from asistente.bot.handlers.finance import edits, keyboards, views
-from asistente.finance.commands import CommandKind, TextCommand, split_new_value
+from asistente.core.commands import CommandKind
+from asistente.finance.commands import TextCommand, split_new_value
 from asistente.finance.service import FinanceService
 from asistente.users.models import User
 
@@ -40,7 +41,4 @@ async def handle_command(
 
     # "cambiar uber 2000": show every editable field.
     transaction = await finance.find_by_text(user, command.rest, today=today)
-    await message.answer(
-        views.transaction_card(transaction, tz, title="✏️ ¿Qué querés cambiar?"),
-        reply_markup=keyboards.transaction_editor(transaction),
-    )
+    await edits.show_editor(message, transaction, tz)

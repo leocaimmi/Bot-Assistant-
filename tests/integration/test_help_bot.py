@@ -6,7 +6,7 @@ TOPICS = [
     ("Gastos e ingresos", "/resumen"),
     ("Cuotas y fijos", "/fijos"),
     ("Gimnasio", "/entreno"),
-    ("Corregir y borrar", "borrar el último"),
+    ("Corregir y borrar", "quiero editar algo"),
     ("Recordatorios", "/recordatorios"),
     ("IA y audios", "/ia"),
 ]

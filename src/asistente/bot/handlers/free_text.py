@@ -2,9 +2,11 @@
 (last) the AI.
 
 Free rules first, in this order: "recordame..." is a reminder, even with an amount in it;
-a leading verb is a command ("borrar uber 2000"); sets x
-reps is a workout ("pecho: banco plano 4x12"); anything with an amount is a transaction
-("uber 2000"). Only what the rules cannot handle goes to the AI, when it is configured.
+a fix of a workout ("cambiar press militar a 40kg") opens it, and one that does not say
+what ("quiero editar algo") opens the latest thing logged; a leading verb is a command
+("borrar uber 2000"); sets x reps is a workout ("pecho: banco plano 4x12"); anything with
+an amount is a transaction ("uber 2000"). Only what the rules cannot handle goes to the
+AI, when it is configured.
 """
 
 from aiogram import F, Router
@@ -14,21 +16,19 @@ from aiogram.types import Message
 
 from asistente.ai.interpreter import Interpreter
 from asistente.ai.usage import AiUsageService, DailyBudget
-from asistente.bot.handlers import assistant
+from asistente.bot.handlers import assistant, latest
 from asistente.bot.handlers import gym as gym_handlers
 from asistente.bot.handlers import recurring as recurring_handlers
 from asistente.bot.handlers import reminders as reminder_handlers
+from asistente.bot.handlers.common import examples_keyboard
 from asistente.bot.handlers.finance import entries as finance_entries
 from asistente.bot.handlers.finance import text_commands
 from asistente.bot.handlers.gym import views as gym_views
 from asistente.bot.handlers.reminders import views as reminder_views
+from asistente.bot.help import HelpTopic
 from asistente.config import Settings
-from asistente.finance.commands import (
-    TextCommand,
-    is_simple_command,
-    looks_like_correction,
-    parse_command,
-)
+from asistente.core.commands import is_vague_edit, looks_like_correction
+from asistente.finance.commands import TextCommand, is_simple_command, parse_command
 from asistente.finance.parser import MissingAmountError, is_simple_entry
 from asistente.finance.recurring import parse_recurring
 from asistente.finance.recurring_service import RecurringPaymentService
@@ -37,23 +37,16 @@ from asistente.finance.service import (
     MissingTargetError,
     NoMatchingTransactionError,
 )
+from asistente.gym.edits import parse_workout_edit
 from asistente.gym.parser import looks_like_workout, parse_workout
 from asistente.gym.service import GymService
 from asistente.reminders.parser import is_reminder_request, mentions_reminders
 from asistente.reminders.service import ReminderService
 from asistente.users.models import User
 
-NOT_UNDERSTOOD = (
-    "🤔 No te entendí. Algunos ejemplos:\n"
-    "• Gasto: <code>uber 2000</code>\n"
-    "• Ingreso: <code>transferencia utn 200.000</code>\n"
-    f"• Entrenamiento: {gym_views.FORMAT_EXAMPLES}\n"
-    "Mirá /ayuda para más."
-)
-CORRECTION_HELP = (
-    "✏️ Para corregir un movimiento escribí, por ejemplo, "
-    "<code>cambiar uber 2000 a 2500</code> o <code>borrar uber 2000</code>."
-)
+# Replies stay short: the examples are one tap away (a button).
+NOT_UNDERSTOOD = "🤔 No te entendí."
+CORRECTION_HELP = "🤔 No entendí qué querés corregir."
 
 
 async def handle_free_text(
@@ -102,6 +95,7 @@ async def route_text(
 ) -> None:
     """Act on ``text`` and answer ``message`` (whose text may be a transcript)."""
     ai_on = interpreter is not None
+    today = message.date.astimezone(settings.tz).date()
     command = parse_command(text)
     if command is not None and mentions_reminders(text):
         # "borrar el recordatorio de la pastilla": reminders have their own list.
@@ -112,9 +106,17 @@ async def route_text(
         if await reminder_handlers.create_from_text(message, text, reminders, user, settings):
             return
         if not ai_on:
-            await message.answer(reminder_views.NOT_UNDERSTOOD)
+            await _answer_help(message, text)
             return
         # The rules could not read the timing: the AI does (below).
+    # Workout fixes before commands and workouts: "cambiar press militar a 3x10" is
+    # neither a movement nor a new exercise.
+    elif (workout_edit := parse_workout_edit(text, today)) is not None:
+        await gym_handlers.edit_from_text(message, workout_edit, gym, user, settings, state)
+        return
+    elif is_vague_edit(text):
+        await latest.edit_latest(message, finance, gym, user, settings)
+        return
     # Commands: "borrar uber 2000" must not register a new expense.
     elif command is not None:
         if await _run_command(message, command, text, finance, user, settings, state, ai_on=ai_on):
@@ -136,7 +138,7 @@ async def route_text(
         state=state,
     ):
         return
-    await message.answer(_help_for(text))
+    await _answer_help(message, text)
 
 
 async def _run_command(
@@ -201,14 +203,20 @@ async def _run_rules(
     return True
 
 
-def _help_for(text: str) -> str:
+async def _answer_help(message: Message, text: str) -> None:
+    """Say what was not understood, with a button to the examples of that topic."""
+    reply, topic = _help_for(text)
+    await message.answer(reply, reply_markup=examples_keyboard(topic))
+
+
+def _help_for(text: str) -> tuple[str, HelpTopic]:
     if is_reminder_request(text):
-        return reminder_views.NOT_UNDERSTOOD
+        return reminder_views.NOT_UNDERSTOOD, HelpTopic.REMINDERS
     if looks_like_workout(text):
-        return gym_views.WORKOUT_FORMAT_HELP
+        return gym_views.WORKOUT_FORMAT_HELP, HelpTopic.GYM
     if looks_like_correction(text):
-        return CORRECTION_HELP
-    return NOT_UNDERSTOOD
+        return CORRECTION_HELP, HelpTopic.EDIT
+    return NOT_UNDERSTOOD, HelpTopic.MENU
 
 
 def build_router() -> Router:

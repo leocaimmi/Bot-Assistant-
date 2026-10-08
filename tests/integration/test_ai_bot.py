@@ -32,6 +32,8 @@ async def test_rules_never_call_the_ai(
     await ai_harness.send("uber 2000")
     await ai_harness.send("pecho: banco plano 4x12 60kg")
     await ai_harness.send("borrar uber 2000")
+    await ai_harness.send("cambiar banco plano a 65kg")
+    await ai_harness.send("quiero cambiar algo del entrenamiento de hoy")
 
     assert fake_interpreter.texts == []
 
@@ -332,6 +334,8 @@ async def test_without_ai_corrections_are_never_registered(
 ) -> None:
     await harness.send("el uber eran 2500")
     assert harness.last_reply == CORRECTION_HELP
+    await harness.click(harness.button("Ver ejemplos"))
+    assert "✏️ <b>Corregir y borrar</b>" in harness.last_reply
 
     await harness.send("perdón, modificar y poner 276.500")
     assert harness.last_reply == CORRECTION_HELP

@@ -22,9 +22,11 @@ src/asistente/
 ├── config.py              # Settings tipados desde variables de entorno
 ├── logging_config.py      # Logging con enmascarado de secretos
 ├── core/                  # Utilidades puras, sin I/O
+│   ├── commands.py        # Verbos para corregir y borrar ("cambiar", "borrá"...)
 │   ├── dates.py           # Zona horaria, meses en español, fechas relativas
 │   ├── errors.py          # UserError: errores con mensaje apto para el usuario
 │   ├── money.py           # Parseo y formato de pesos argentinos
+│   ├── schedule.py        # Una vez, diario, semanal o mensual: próxima ejecución
 │   └── text.py            # Normalización (minúsculas, sin acentos)
 ├── db/                    # Infraestructura de persistencia
 │   ├── base.py            # DeclarativeBase, convenciones de nombres y mixins
@@ -33,8 +35,8 @@ src/asistente/
 │   └── types.py           # UTCDateTime
 ├── users/                 # Dominio: usuarios
 ├── gym/                   # Dominio: gimnasio (modelos, parser 4x12, servicio)
+│   └── edits.py           # "cambiar press militar a 40kg" → WorkoutEdit
 ├── reminders/             # Dominio: recordatorios
-│   ├── schedule.py        # Una vez, diario, semanal o mensual: próxima ejecución
 │   ├── parser.py          # "recordame mañana a las 9..." → ParsedReminder
 │   └── service.py         # Crear, listar, posponer y encontrar los vencidos
 ├── ai/                    # IA opcional: intérprete, transcripción, precios, validación, uso
@@ -58,10 +60,12 @@ src/asistente/
     ├── commands.py        # Menú de comandos
     ├── errors.py          # Respuesta ante errores (sin detalles internos)
     ├── help.py            # Texto de /ayuda, una sección por módulo
+    ├── pending.py         # Cambios que esperan Aplicar (los botones llevan un token)
     ├── ui.py              # Editar o enviar mensajes, cortar textos largos
     ├── middlewares/       # Acceso, sesión de DB, usuario, reseteo de pasos
     └── handlers/          # Un paquete por dominio (common, finance, gym, ...)
-        ├── free_text.py   # Ruteo del texto: recordatorio, comando, gimnasio, gasto o IA
+        ├── free_text.py   # Ruteo del texto: recordatorio, corrección, comando, gimnasio, gasto o IA
+        ├── latest.py      # "quiero editar algo": abre lo último anotado
         ├── reminders/     # Tarjetas, /recordatorios y botones Listo / 10 min
         ├── recurring/     # Cuotas y fijos: aviso al crearlos y /fijos
         ├── voice.py       # Audios: los transcribe y siguen el camino del texto
@@ -102,7 +106,11 @@ flowchart TD
     M[Mensaje de texto] --> RM{"¿Dice recordame?"}
     RM -->|sí, se entiende cuándo| REM[Crea el recordatorio]
     RM -->|sí, no se entiende| AI
-    RM -->|no| C{"¿Empieza con borrar/cambiar?"}
+    RM -->|no| WE{"¿Corrige un entrenamiento?<br/>cambiar press militar a 40kg"}
+    WE -->|sí| WX[Muestra el cambio y espera Aplicar<br/>o abre el ejercicio o el día]
+    WE -->|no| VE{"¿Corrige sin decir qué?<br/>quiero editar algo"}
+    VE -->|sí| LT[Abre lo último anotado]
+    VE -->|no| C{"¿Empieza con borrar/cambiar?"}
     C -->|corto| TC[Comando de texto<br/>muestra el cambio y espera Aplicar]
     C -->|largo o sin resolver| AI
     C -->|no| W{"¿Tiene series x reps<br/>en el formato?"}

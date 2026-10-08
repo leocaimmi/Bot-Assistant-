@@ -33,6 +33,17 @@ def test_reads_date_word() -> None:
 
 
 @pytest.mark.parametrize(
+    ("text", "day"),
+    [("nafta 30k el miércoles", date(2026, 9, 30)), ("nafta 30k el 15/09", date(2026, 9, 15))],
+)
+def test_reads_a_day_after_el(text: str, day: date) -> None:
+    entry = parse_entry(text, today=TODAY)
+
+    assert entry.day == day
+    assert entry.words == ("nafta",)
+
+
+@pytest.mark.parametrize(
     ("text", "kind"),
     [
         ("+ 50000 venta bici", TransactionKind.INCOME),
