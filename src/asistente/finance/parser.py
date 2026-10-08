@@ -102,6 +102,8 @@ def parse_entry(text: str, *, today: date) -> ParsedEntry:
         if index not in used and (parsed_day := parse_day(token, today)) is not None:
             day = parsed_day
             used.add(index)
+            if index > 0 and normalize(tokens[index - 1]) == "el":
+                used.add(index - 1)  # "el miércoles", "el 15/09"
             break
 
     if kind is None:
