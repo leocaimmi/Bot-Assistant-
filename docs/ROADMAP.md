@@ -43,7 +43,8 @@ Un bot de Telegram de uso personal (un solo usuario) para:
 | 13. Resumen legible y logs en hora local | `fix/summary-details`, `fix/log-timezone` | Hecho |
 | 14. Cuotas y gastos fijos | `feat/recurring-payments` | Hecho |
 | 15. Mejoras | varias | Backlog |
-| 16. Ajustes de uso | `fix/usability-adjustments` | Hecho, falta merge |
+| 16. Ajustes de uso | `fix/usability-adjustments` | Hecho |
+| 17. Corregir entrenamientos | `fix/gym-edits` | Hecho, falta merge |
 
 ### Fase 0: base del repositorio
 
@@ -98,7 +99,7 @@ Formato: primero las series y después las repeticiones; el peso es opcional.
 | `pecho: banco plano 4x12 60kg, inclinado con mancuerna 3x8` | Anota 2 ejercicios de pecho |
 | `hice pecho banco plano 4 series de 12` | Mismo formato con palabras |
 | `ayer espalda: dominadas 4x8` | Con fecha |
-| `/entreno [día]` | Lo entrenado ese día, con botones para borrar |
+| `/entreno [día]` | Lo entrenado ese día, con botones para corregir o borrar |
 | `/semana` | Días entrenados y músculos de la semana |
 | `/historial banco plano` | Progresión y récord personal |
 | `/ejercicios` | Ejercicios agrupados por músculo |
@@ -210,6 +211,18 @@ verifica que todo comando del menú de Telegram esté explicado.
   (`coca, doritos, alfajor 10.200`); la ficha muestra un ítem por renglón y la IA separa
   los que se escriben sin comas.
 
+### Fase 17: corregir entrenamientos
+
+- `/entreno` y el botón **✏️ Editar** de cada entrenamiento anotado abren el día: tocás
+  un ejercicio y lo corregís (`3x10 40kg`, `40kg` o `sin peso`) o lo borrás.
+- Escrito o dictado: `cambiar press militar a 40kg`, `al press del miércoles ponele 40
+  kilos` o `cambiar el entreno del miércoles`. Muestra el antes y después y espera
+  **Aplicar**, como en los movimientos. Lo resuelven las reglas: no gasta IA.
+- `quiero editar algo`, sin decir qué, abre lo último que anotaste (movimiento o
+  entrenamiento), también sin IA.
+- Las fechas aceptan días de la semana (`el miércoles`: el último).
+- Los mensajes de "no entendí" son cortos y traen el botón **💡 Ver ejemplos**.
+
 ## Cómo se va a usar
 
 | Mensaje | Qué hace |
@@ -227,7 +240,8 @@ verifica que todo comando del menú de Telegram esté explicado.
 Formatos de importe aceptados: `2000`, `2.000`, `1.500,50`, `2k`, `1,5k`, `200 mil`,
 `2 lucas`, `1 palo`, `$2000`.
 
-Fechas aceptadas: `hoy`, `ayer`, `anteayer`, `15/09`, `15/09/2026`.
+Fechas aceptadas: `hoy`, `ayer`, `anteayer`, `el miércoles` (el último), `15/09`,
+`15/09/2026`.
 
 ## Decisiones
 

@@ -41,7 +41,8 @@ separados por coma. Sin comas (`gasto 10.200 una coca Doritos picantes y un choc
 los separa la IA.
 
 Importes aceptados: `2000`, `2.000`, `1.500,50`, `2k`, `1,5k`, `200 mil`, `2 lucas`,
-`1 palo`. Fechas: `hoy`, `ayer`, `anteayer`, `15/09`, `15/09/2026`. Cuentas: `mp`,
+`1 palo`. Fechas: `hoy`, `ayer`, `anteayer`, `el miércoles` (el último), `15/09`,
+`15/09/2026`. Cuentas: `mp`,
 `mercado pago`, `efectivo`, `banco`.
 
 ### Gimnasio
@@ -54,12 +55,17 @@ Primero las series y después las repeticiones; el peso es opcional.
 | `hice pecho banco plano 4 series de 12` | Mismo formato con palabras |
 | `piernas: sentadilla 4x10 80kg; prensa 3x12` | Varios ejercicios, separados por coma, `;`, `y` o renglones |
 | `ayer espalda: dominadas 4x8` | Con fecha |
-| `/entreno [día]` | El entrenamiento del día, con botones para borrar ejercicios |
+| `/entreno [día]` | El entrenamiento del día; tocá un número para corregir o borrar un ejercicio |
+| `cambiar press militar a 40kg` | Muestra el cambio y lo aplica cuando tocás **Aplicar** (también `a 3x10` o `sin peso`) |
+| `al press del miércoles ponele 40 kilos` | Lo mismo, dicho como en un audio |
+| `cambiar el entreno del miércoles` | Abre ese día para elegir el ejercicio |
 | `/semana` | Días entrenados y músculos de la semana |
 | `/historial banco plano` | Progreso del ejercicio y récord personal |
 | `/ejercicios` | Tus ejercicios agrupados por músculo |
 
-Cada entrenamiento anotado trae un botón **Deshacer**.
+Cada entrenamiento anotado trae los botones **Deshacer** y **✏️ Editar**. Si escribís
+`quiero editar algo` sin decir qué, abre lo último que anotaste: un movimiento o un
+entrenamiento (sin usar la IA).
 
 ### Recordatorios
 
